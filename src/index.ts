@@ -1,14 +1,17 @@
 import {
     vec2,
     identityTransform,
-    getShapeBoundsWorld,
-    isPointInBounds,
+    createScene,
+    findTopmostShapeAtPoint,
     type RectShape,
+    type EllipseShape,
 } from "./engine";
 
-const t = identityTransform();
-t.position = vec2(100, 50);
-t.rotation = Math.PI / 6; // = 30 degrees
+const rectTransform = identityTransform();
+rectTransform.position = vec2(100, 50);
+
+const ellipseTransform = identityTransform();
+ellipseTransform.position = vec2(120, 70);
 
 const rect: RectShape = {
     type: "rect",
@@ -16,19 +19,31 @@ const rect: RectShape = {
     origin: vec2(0, 0),
     width: 200,
     height: 100,
-    transform: t,
+    transform: rectTransform,
     style: { fill: "#000" },
 };
 
-const bounds = getShapeBoundsWorld(rect);
+const ellipse: EllipseShape = {
+    type: "ellipse",
+    id: "ellipse1",
+    center: vec2(50, 50),
+    radiusX: 60,
+    radiusY: 40,
+    transform: ellipseTransform,
+    style: { fill: "#f00" },
+}
 
-console.log("Bounds min:", bounds.min);
-console.log("Bounds max:", bounds.max);
+const scene = createScene();
 
-const insidePoint = vec2(150, 100);
-const outsidePoint = vec2(20, 20);
+scene.nodes.push(
+    { type: "shape", shape: rect },
+    { type: "shape", shape: ellipse }
+);
 
-console.log("Inside point hit:", isPointInBounds(insidePoint, rect));
-console.log("Outside point hit:", isPointInBounds(outsidePoint, rect));
+const hit1 = findTopmostShapeAtPoint(vec2(180, 140), scene);
+const hit2 = findTopmostShapeAtPoint(vec2(10, 10), scene);
+
+console.log("Hit 1:", hit1 ? hit1.id : null);
+console.log("Hit 2:", hit2 ? hit2.id : null);
 
 
