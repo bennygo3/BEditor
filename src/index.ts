@@ -2,6 +2,9 @@ import {
     vec2,
     identityTransform,
     createScene,
+    createEditorState,
+    CommandHistory,
+    SelectShapeCommand,
     findTopmostShapeAtPoint,
     type RectShape,
     type EllipseShape,
@@ -34,16 +37,28 @@ const ellipse: EllipseShape = {
 }
 
 const scene = createScene();
-
 scene.nodes.push(
     { type: "shape", shape: rect },
     { type: "shape", shape: ellipse }
 );
 
-const hit1 = findTopmostShapeAtPoint(vec2(180, 140), scene);
-const hit2 = findTopmostShapeAtPoint(vec2(10, 10), scene);
+const editorState = createEditorState(scene);
+const history = new CommandHistory();
 
-console.log("Hit 1:", hit1 ? hit1.id : null);
-console.log("Hit 2:", hit2 ? hit2.id : null);
+const clickedShape = findTopmostShapeAtPoint(vec2(180, 140), scene);
+
+console.log("Before selection:", editorState.selectedShapeId);
+
+history.execute(
+    new SelectShapeCommand(editorState, clickedShape ? clickedShape.id : null)
+);
+console.log("After selection:", editorState.selectedShapeId);
+
+history.undo();
+console.log("After undo:", editorState.selectedShapeId);
+
+history.redo();
+console.log("After redo:", editorState.selectedShapeId);
+
 
 
