@@ -98,11 +98,11 @@ export class CanvasRenderer {
         this.ctx.stroke();
     }
 
-    renderBounds(shape: Shape): void {
+    renderBounds(shape: Shape, options?: { color?: string }): void {
         const bounds = getShapeBoundsWorld(shape);
 
         this.ctx.save();
-        this.ctx.strokeStyle = "#00aaff";
+        this.ctx.strokeStyle = options?.color ?? "#00aaff";
         this.ctx.lineWidth = 1;
         this.ctx.setLineDash([6, 4]);
         this.ctx.strokeRect(

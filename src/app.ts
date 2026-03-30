@@ -2,8 +2,14 @@ import {
     vec2,
     identityTransform,
     createScene,
+    createEditorState,
+    findTopmostShapeAtPoint,
+    findShapeById,
+    CommandHistory,
+    SelectShapeCommand,
     type RectShape,
     type EllipseShape,
+    MoveShapeCommand,
 } from "./engine";
 import { CanvasRenderer } from "./renderer/canvasRenderer";
 
@@ -51,11 +57,12 @@ function buildDemoScene() {
         { type: "shape", shape: ellipse }
     );
 
-    return { scene, rect, ellipse }
+    return scene;
+
 }
 
 function main(): void {
-    const canvas = document.getElementById("editor-canvas") as HTMLCanvasElement | null;
+    const canvas = document.getElementById("editor-canvas") as HTMLCanvasElement;
     if (!canvas) {
         throw new Error("Canvas element #editor-canvas not found");
     }
@@ -65,12 +72,165 @@ function main(): void {
         throw new Error("2D canvas context could not be created");
     }
 
+    const scene = buildDemoScene();
+    const editorState = createEditorState(scene);
+    const history = new CommandHistory();
     const renderer = new CanvasRenderer(ctx);
-    const { scene, rect, ellipse } = buildDemoScene();
 
-    renderer.renderScene(scene);
-    renderer.renderBounds(rect);
-    renderer.renderBounds(ellipse);
+    let isDragging = false;
+    let dragStart = vec2(0, 0);
+    let lastPointer = vec2(0, 0);
+
+    function render(): void {
+        renderer.renderScene(editorState.scene);
+
+        if (editorState.selectedShapeId) {
+            const shape = findShapeById(
+                editorState.scene,
+                editorState.selectedShapeId
+            );
+            if (shape) {
+                renderer.renderBounds(shape, { color: "#16a34a" });
+            }
+        }
+    } 
+
+    canvas.addEventListener("mousedown", (event) => {
+        const rect = canvas.getBoundingClientRect();
+
+        const point = vec2(
+            event.clientX - rect.left,
+            event.clientY - rect.top
+        );
+
+        const hit = findTopmostShapeAtPoint(point, editorState.scene);
+
+        history.execute(
+            new SelectShapeCommand(
+                editorState,
+                hit ? hit.id : null
+            )
+        );
+
+        if (hit) {
+            isDragging = true;
+            dragStart = point;
+            lastPointer = point;
+        }
+
+        render();
+    });
+
+    canvas.addEventListener("mousemove", (event) => {
+        if (!isDragging || !editorState.selectedShapeId) return;
+
+        const rect = canvas.getBoundingClientRect();
+
+        const point = vec2(
+            event.clientX - rect.left,
+            event.clientY - rect.top
+        );
+
+        const dx = point.x - lastPointer.x;
+        const dy = point.y - lastPointer.y;
+
+        const shape = findShapeById(
+            editorState.scene,
+            editorState.selectedShapeId
+        );
+
+        if (!shape) return;
+
+        // live preview movement (Not a command yet)
+        shape.transform.position.x += dx;
+        shape.transform.position.y += dy;
+
+        lastPointer = point;
+
+        render();
+    });
+
+    canvas.addEventListener("mouseup", (event) => {
+        if (!isDragging || !editorState.selectedShapeId) return;
+
+        const rect = canvas.getBoundingClientRect();
+
+        const point = vec2(
+            event.clientX - rect.left,
+            event.clientY - rect.top
+        );
+
+        const totalDelta = vec2(
+            point.x - dragStart.x,
+            point.y - dragStart.y
+        );
+
+        // revert the preview movement
+        const shape = findShapeById(
+            editorState.scene,
+            editorState.selectedShapeId
+        );
+
+        if (shape) {
+            shape.transform.position.x -= totalDelta.x;
+            shape.transform.position.y -= totalDelta.y;
+        }
+
+        // commit as a command
+        history.execute(
+            new MoveShapeCommand(
+                editorState,
+                editorState.selectedShapeId,
+                totalDelta
+            )
+        );
+
+        isDragging = false;
+
+        render();
+    });
+
+    // canvas.addEventListener("click", (event) => {
+    //     const rect = canvas.getBoundingClientRect();
+
+    //     const point = vec2(
+    //         event.clientX - rect.left,
+    //         event.clientY - rect.top
+    //     );
+
+    //     const hit = findTopmostShapeAtPoint(point, editorState.scene);
+
+    //     history.execute(
+    //         new SelectShapeCommand(
+    //             editorState,
+    //             hit ? hit.id : null
+    //         )
+    //     );
+
+    //     console.log("Selected:", editorState.selectedShapeId);
+
+    //     render();
+    // });
+
+    window.addEventListener("keydown", (event) => {
+        const isMac = navigator.userAgent.toUpperCase().includes("MAC");
+        const metaOrCtrl = isMac ? event.metaKey : event.ctrlKey;
+
+        if (metaOrCtrl && event.key === "z" && !event.shiftKey) {
+            history.undo();
+            render();
+        }
+
+        if (
+            metaOrCtrl && 
+            (event.key === "y" || (event.key === "z" && event.shiftKey))
+        ) {
+            history.redo();
+            render();
+        }
+    });
+
+    render();
 }
 
 window.addEventListener("DOMContentLoaded", main);
