@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Logo Editor Preview</title>
+        <style>
+            body {
+                margin: 0;
+                background: #f4f4f4;
+                font-family: Arial, sans-serif;
+            }
+
+            .app-shell {
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+            }
+
+            .topbar {
+                padding: 12px 16px;
+                background: #111;
+                color: white;
+                font-size: 14px;
+            }
+
+            .workspace {
+                flex: 1;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 24px;
+            }
+
+            canvas {
+                background: white;
+                border: 1px solid #d0d0d0;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            }
+        </style>
+    </head>
+    <body>
+        <div class="app-shell">
+            <div class="topbar">Logo Editor Engine Preview</div>
+            <div class="workspace">
+                <canvas id="editor-canvas" width="900" height="600"></canvas>
+            </div>       
+        </div>
+
+        <script src="../dist/app.js"></script>
+    </body>
+</html>
