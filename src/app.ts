@@ -7,9 +7,10 @@ import {
     findShapeById,
     CommandHistory,
     SelectShapeCommand,
+    MoveShapeCommand,
     type RectShape,
     type EllipseShape,
-    MoveShapeCommand,
+    type InteractionMode,
 } from "./engine";
 import { CanvasRenderer } from "./renderer/canvasRenderer";
 
@@ -77,9 +78,7 @@ function main(): void {
     const history = new CommandHistory();
     const renderer = new CanvasRenderer(ctx);
 
-    let isDragging = false;
-    let dragStart = vec2(0, 0);
-    let lastPointer = vec2(0, 0);
+    let interaction: InteractionMode = { type: "idle" };
 
     function render(): void {
         renderer.renderScene(editorState.scene);
@@ -113,16 +112,21 @@ function main(): void {
         );
 
         if (hit) {
-            isDragging = true;
-            dragStart = point;
-            lastPointer = point;
+            interaction = {
+                type: "dragging",
+                shapeId: hit.id,
+                dragStart: point,
+                lastPointer: point,
+            };
+        } else {
+            interaction = { type: "idle" };
         }
 
         render();
     });
 
     canvas.addEventListener("mousemove", (event) => {
-        if (!isDragging || !editorState.selectedShapeId) return;
+        if (interaction.type !== "dragging") return;
 
         const rect = canvas.getBoundingClientRect();
 
@@ -131,12 +135,12 @@ function main(): void {
             event.clientY - rect.top
         );
 
-        const dx = point.x - lastPointer.x;
-        const dy = point.y - lastPointer.y;
+        const dx = point.x - interaction.lastPointer.x;
+        const dy = point.y - interaction.lastPointer.y;
 
         const shape = findShapeById(
             editorState.scene,
-            editorState.selectedShapeId
+            interaction.shapeId
         );
 
         if (!shape) return;
@@ -145,13 +149,16 @@ function main(): void {
         shape.transform.position.x += dx;
         shape.transform.position.y += dy;
 
-        lastPointer = point;
+        interaction = {
+            ...interaction,
+            lastPointer: point,
+        };
 
         render();
     });
 
     canvas.addEventListener("mouseup", (event) => {
-        if (!isDragging || !editorState.selectedShapeId) return;
+        if (interaction.type !== "dragging") return;
 
         const rect = canvas.getBoundingClientRect();
 
@@ -161,14 +168,14 @@ function main(): void {
         );
 
         const totalDelta = vec2(
-            point.x - dragStart.x,
-            point.y - dragStart.y
+            point.x - interaction.dragStart.x,
+            point.y - interaction.dragStart.y
         );
 
         // revert the preview movement
         const shape = findShapeById(
             editorState.scene,
-            editorState.selectedShapeId
+            interaction.shapeId
         );
 
         if (shape) {
@@ -180,37 +187,19 @@ function main(): void {
         history.execute(
             new MoveShapeCommand(
                 editorState,
-                editorState.selectedShapeId,
+                interaction.shapeId,
                 totalDelta
             )
         );
 
-        isDragging = false;
+        interaction = { type: "idle" };
 
         render();
     });
 
-    // canvas.addEventListener("click", (event) => {
-    //     const rect = canvas.getBoundingClientRect();
-
-    //     const point = vec2(
-    //         event.clientX - rect.left,
-    //         event.clientY - rect.top
-    //     );
-
-    //     const hit = findTopmostShapeAtPoint(point, editorState.scene);
-
-    //     history.execute(
-    //         new SelectShapeCommand(
-    //             editorState,
-    //             hit ? hit.id : null
-    //         )
-    //     );
-
-    //     console.log("Selected:", editorState.selectedShapeId);
-
-    //     render();
-    // });
+    canvas.addEventListener("mouseleave", () => {
+        interaction = { type: "idle" };
+    });
 
     window.addEventListener("keydown", (event) => {
         const isMac = navigator.userAgent.toUpperCase().includes("MAC");
