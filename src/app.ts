@@ -8,6 +8,8 @@ import {
     CommandHistory,
     SelectShapeCommand,
     MoveShapeCommand,
+    hitTestRectHandle,
+    ResizeRectCommand,
     type RectShape,
     type EllipseShape,
     type InteractionMode,
@@ -80,7 +82,7 @@ function main(): void {
 
     let interaction: InteractionMode = { type: "idle" };
 
-    function render(): void {
+        function render(): void {
         renderer.renderScene(editorState.scene);
 
         if (editorState.selectedShapeId) {
@@ -90,6 +92,10 @@ function main(): void {
             );
             if (shape) {
                 renderer.renderBounds(shape, { color: "#16a34a" });
+                
+                if (shape.type === "rect") {
+                    renderer.renderRectHandles(shape);
+                }
             }
         }
     } 
@@ -101,6 +107,28 @@ function main(): void {
             event.clientX - rect.left,
             event.clientY - rect.top
         );
+
+        if (editorState.selectedShapeId) {
+            const selectedShape = findShapeById(editorState.scene, editorState.selectedShapeId);
+
+            if (selectedShape && selectedShape.type === "rect") {
+                const handle = hitTestRectHandle(point, selectedShape);
+
+                if (handle) {
+                    interaction = {
+                        type: "resizing-rect",
+                        shapeId: selectedShape.id,
+                        handle,
+                        startPointer: point,
+                        startOrigin: {...selectedShape.origin },
+                        startWidth: selectedShape.width,
+                        startHeight: selectedShape.height,
+                    };
+
+                    return;
+                }
+            }
+        }
 
         const hit = findTopmostShapeAtPoint(point, editorState.scene);
 
@@ -126,14 +154,55 @@ function main(): void {
     });
 
     canvas.addEventListener("mousemove", (event) => {
-        if (interaction.type !== "dragging") return;
-
+        
         const rect = canvas.getBoundingClientRect();
 
         const point = vec2(
             event.clientX - rect.left,
             event.clientY - rect.top
         );
+
+        if (interaction.type === "resizing-rect") {
+            const shape = findShapeById(editorState.scene, interaction.shapeId);
+            if (!shape || shape.type !== "rect") return;
+
+            const dx = point.x - interaction.startPointer.x;
+            const dy = point.y - interaction.startPointer.y;
+
+            let newOrigin = { ...interaction.startOrigin};
+            let newWidth = interaction.startWidth;
+            let newHeight = interaction.startHeight;
+
+            if (interaction.handle === "se") {
+                newWidth = interaction.startWidth + dx;
+                newHeight = interaction.startHeight + dy;
+            } else if (interaction.handle === "sw") {
+                newOrigin.x = interaction.startOrigin.x + dx;
+                newWidth = interaction.startWidth - dx;
+                newHeight = interaction.startHeight + dy;
+            } else if (interaction.handle === "ne") {
+                newOrigin.y = interaction.startOrigin.y + dy;
+                newWidth = interaction.startWidth + dx;
+                newHeight = interaction.startHeight - dy;
+            } else if (interaction.handle === "nw") {
+                newOrigin.x = interaction.startOrigin.x + dx;
+                newOrigin.y = interaction.startOrigin.x + dy;
+                newWidth = interaction.startWidth - dx;
+                newHeight = interaction.startHeight - dy;
+            }
+
+            newWidth = Math.max(10, newWidth);
+            newHeight = Math.max(10, newHeight);
+
+            shape.origin = newOrigin;
+            shape.width = newWidth;
+            shape.height = newHeight;
+
+            render();
+            return;
+        }
+
+        if (interaction.type !== "dragging") return;
 
         const dx = point.x - interaction.lastPointer.x;
         const dy = point.y - interaction.lastPointer.y;
@@ -158,14 +227,36 @@ function main(): void {
     });
 
     canvas.addEventListener("mouseup", (event) => {
-        if (interaction.type !== "dragging") return;
-
         const rect = canvas.getBoundingClientRect();
 
         const point = vec2(
             event.clientX - rect.left,
             event.clientY - rect.top
         );
+
+        if (interaction.type === "resizing-rect") {
+            const shape = findShapeById(editorState.scene, interaction.shapeId);
+            if (shape && shape.type === "rect") {
+                history.execute(
+                    new ResizeRectCommand(
+                        editorState,
+                        interaction.shapeId,
+                        interaction.startOrigin,
+                        interaction.startWidth,
+                        interaction.startHeight,
+                        { ...shape.origin },
+                        shape.width,
+                        shape.height
+                    )
+                );
+            }
+
+            interaction = { type: "idle"};
+            render();
+            return;
+        }
+
+        if (interaction.type !== "dragging") return;
 
         const totalDelta = vec2(
             point.x - interaction.dragStart.x,

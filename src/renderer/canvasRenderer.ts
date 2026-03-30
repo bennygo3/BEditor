@@ -65,6 +65,33 @@ export class CanvasRenderer {
         this.ctx.stroke();
     }
 
+    renderRectHandles(shape: RectShape): void {
+        const bounds = getShapeBoundsWorld(shape);
+        const size = 8;
+        const half = size / 2;
+
+        const handles = [
+            { x: bounds.min.x, y: bounds.min.y }, // nw
+            { x: bounds.max.x, y: bounds.min.y }, // ne
+            { x: bounds.max.x, y: bounds.max.y }, // se
+            { x: bounds.min.x, y: bounds.max.y }, // sw
+        ];
+
+        this.ctx.save();
+        this.ctx.fillStyle = "#ffffff";
+        this.ctx.strokeStyle = "#16a34a";
+        this.ctx.lineWidth = 1.5;
+
+        for (const h of handles) {
+            this.ctx.beginPath();
+            this.ctx.rect(h.x - half, h.y - half, size, size);
+            this.ctx.fill();
+            this.ctx.stroke();
+        }
+
+        this.ctx.restore();
+    }
+
     private renderEllipse(shape: EllipseShape): void {
         const steps = 48;
         const points: Vec2[] = [];
