@@ -50,9 +50,9 @@ export class CanvasRenderer {
 
         this.ctx.beginPath();
         this.ctx.moveTo(corners[0].x, corners[0].y);
-        this.ctx.moveTo(corners[1].x, corners[1].y);
-        this.ctx.moveTo(corners[2].x, corners[2].y);
-        this.ctx.moveTo(corners[3].x, corners[3].y);
+        this.ctx.lineTo(corners[1].x, corners[1].y);
+        this.ctx.lineTo(corners[2].x, corners[2].y);
+        this.ctx.lineTo(corners[3].x, corners[3].y);
         this.ctx.closePath();
 
         if (shape.style.fill) {
@@ -93,7 +93,7 @@ export class CanvasRenderer {
             this.ctx.fill();
         }
 
-        this.ctx.strokeStyle = shape.style.stroke ?? "222";
+        this.ctx.strokeStyle = shape.style.stroke ?? "#222";
         this.ctx.lineWidth = shape.style.strokeWidth ?? 1;
         this.ctx.stroke();
     }

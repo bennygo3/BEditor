@@ -15,7 +15,7 @@ function buildDemoScene() {
     rectTransform.rotation = Math.PI / 12;
 
     const ellipseTransform = identityTransform();
-    ellipseTransform.position = vec2(320, 180);
+    ellipseTransform.position = vec2(500, 250);
     ellipseTransform.rotation = Math.PI / 10;
 
     const rect: RectShape = {
@@ -26,8 +26,8 @@ function buildDemoScene() {
         height: 120,
         transform: rectTransform,
         style: {
-            fill: "#111111",
-            stroke: "#333333",
+            fill: "#4f46e5",
+            stroke: "#111111",
             strokeWidth: 2,
         },
     };
