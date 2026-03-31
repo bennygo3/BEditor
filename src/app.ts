@@ -10,6 +10,9 @@ import {
     MoveShapeCommand,
     hitTestRectHandle,
     ResizeRectCommand,
+    serializeScene,
+    deserializeScene,
+    sceneToSvg,
     type RectShape,
     type EllipseShape,
     type InteractionMode,
@@ -75,10 +78,64 @@ function main(): void {
         throw new Error("2D canvas context could not be created");
     }
 
+    // let scene = buildDemoScene();
     const scene = buildDemoScene();
     const editorState = createEditorState(scene);
     const history = new CommandHistory();
     const renderer = new CanvasRenderer(ctx);
+
+    const saveButton = document.getElementById("save-scene") as HTMLButtonElement | null;
+    const loadButton = document.getElementById("load-scene") as HTMLButtonElement | null;
+    const exportButton = document.getElementById("export-svg") as HTMLButtonElement | null;
+
+    console.log("saveButton:", saveButton);
+    console.log("loadButton:", loadButton);
+    console.log("exportButton", exportButton);
+    
+    if (!saveButton || !loadButton || !exportButton) {
+        // throw new Error("Save/load buttons not found");
+        console.error("Save/load/export buttons not found")
+        return;
+    }
+
+    saveButton.addEventListener("click", () => {
+        const json = serializeScene(editorState.scene);
+        localStorage.setItem("logo-editor-scene", json);
+        console.log("Scene saved");
+    });
+
+    loadButton.addEventListener("click", () => {
+        const json = localStorage.getItem("logo-editor-scene");
+
+        if (!json) {
+            console.log("No saved scene found");
+            return;
+        }
+
+        const loadedScene = deserializeScene(json);
+        editorState.scene.nodes = loadedScene.nodes;
+        editorState.selectedShapeId = null;
+        interaction = { type: "idle" };
+
+        console.log("Scene loaded");
+        render();
+    });
+
+    exportButton.addEventListener("click", () => {
+        const svg = sceneToSvg(editorState.scene, canvas.width, canvas.height);
+
+        const blob = new Blob([svg], { type: "image/svg+xml" });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "logo-export.svg";
+        a.click();
+
+        URL.revokeObjectURL(url);
+
+        console.log("SVG exported");
+    })
 
     let interaction: InteractionMode = { type: "idle" };
 
@@ -186,7 +243,7 @@ function main(): void {
                 newHeight = interaction.startHeight - dy;
             } else if (interaction.handle === "nw") {
                 newOrigin.x = interaction.startOrigin.x + dx;
-                newOrigin.y = interaction.startOrigin.x + dy;
+                newOrigin.y = interaction.startOrigin.y + dy;
                 newWidth = interaction.startWidth - dx;
                 newHeight = interaction.startHeight - dy;
             }

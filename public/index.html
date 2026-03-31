@@ -36,16 +36,34 @@
                 border: 1px solid #d0d0d0;
                 box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
             }
+
+            button {
+                margin-right: 8px;
+                padding: 6px 10px;
+                border: 1px solid #444;
+                background: #fff;
+                cursor: pointer;
+            }
         </style>
     </head>
     <body>
         <div class="app-shell">
-            <div class="topbar">Logo Editor Engine Preview</div>
+            <div class="topbar">
+                <button id="save-scene">Save Scene</button>
+                <button id="load-scene">Load Scene</button>
+                <button id="export-svg">Export SVG</button>
+                <span style="margin-left: 15px;">Logo Editor Engine Preview</span>
+            </div>
             <div class="workspace">
                 <canvas id="editor-canvas" width="900" height="600"></canvas>
             </div>       
         </div>
 
         <script>require("../dist/app.js")</script>
+         <!-- <script>
+            const appPath = require.resolve("../dist/app.js");
+            delete require.cache[appPath];
+            require(appPath);
+         </script> -->
     </body>
 </html>
