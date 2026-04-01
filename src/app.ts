@@ -13,9 +13,12 @@ import {
     serializeScene,
     deserializeScene,
     sceneToSvg,
+    AddShapeCommand,
+    generateId,
     type RectShape,
     type EllipseShape,
     type InteractionMode,
+    type Tool,
 } from "./engine";
 import { CanvasRenderer } from "./renderer/canvasRenderer";
 
@@ -64,7 +67,29 @@ function buildDemoScene() {
     );
 
     return scene;
+}
 
+function makeRectFromDrag(startPoint: { x: number; y: number }, endPoint: { x: number; y: number }, id: string): RectShape {
+    const x = Math.min(startPoint.x, endPoint.x);
+    const y = Math.min(startPoint.y, endPoint.y);
+    const width = Math.abs(endPoint.x - startPoint.x);
+    const height = Math.abs(endPoint.y - startPoint.y);
+
+    return {
+        type: "rect",
+        id,
+        origin: vec2(x, y),
+        width,
+        height,
+        transform: identityTransform(),
+        style: {
+            fill: "#60a5fa55",
+            stroke: "#2563eb",
+            strokeWidth: 2,
+        },
+    };
+
+    // function allows the drag to work in any direction
 }
 
 function main(): void {
@@ -83,16 +108,21 @@ function main(): void {
     const editorState = createEditorState(scene);
     const history = new CommandHistory();
     const renderer = new CanvasRenderer(ctx);
+    
+    let activeTool: Tool = "select";
 
     const saveButton = document.getElementById("save-scene") as HTMLButtonElement | null;
     const loadButton = document.getElementById("load-scene") as HTMLButtonElement | null;
     const exportButton = document.getElementById("export-svg") as HTMLButtonElement | null;
+    const selectToolButton = document.getElementById("tool-select") as HTMLButtonElement | null;
+    const rectToolButton = document.getElementById("rect-tool") as HTMLButtonElement | null;
+
 
     console.log("saveButton:", saveButton);
     console.log("loadButton:", loadButton);
     console.log("exportButton", exportButton);
     
-    if (!saveButton || !loadButton || !exportButton) {
+    if (!saveButton || !loadButton || !exportButton || !selectToolButton || !rectToolButton) {
         // throw new Error("Save/load buttons not found");
         console.error("Save/load/export buttons not found")
         return;
@@ -135,7 +165,17 @@ function main(): void {
         URL.revokeObjectURL(url);
 
         console.log("SVG exported");
-    })
+    });
+
+    selectToolButton.addEventListener("click", () => {
+        activeTool = "select";
+        console.log("Active tool: select");
+    });
+
+    rectToolButton.addEventListener("click", () => {
+        activeTool = "rect";
+        console.log("Active tool: rect");
+    });
 
     let interaction: InteractionMode = { type: "idle" };
 
@@ -165,6 +205,23 @@ function main(): void {
             event.clientY - rect.top
         );
 
+        if (activeTool === "rect") {
+            const previewShapeId = generateId("rect");
+
+            const previewRect = makeRectFromDrag(point, point, previewShapeId);
+            editorState.scene.nodes.push({ type: "shape", shape: previewRect });
+
+            editorState.selectedShapeId = previewShapeId;
+            interaction = {
+                type: "creating-rect",
+                startPoint: point,
+                previewShapeId,
+            };
+
+            render();
+            return;
+        }
+
         if (editorState.selectedShapeId) {
             const selectedShape = findShapeById(editorState.scene, editorState.selectedShapeId);
 
@@ -182,6 +239,7 @@ function main(): void {
                         startHeight: selectedShape.height,
                     };
 
+                    render();
                     return;
                 }
             }
@@ -218,6 +276,25 @@ function main(): void {
             event.clientX - rect.left,
             event.clientY - rect.top
         );
+
+        if (interaction.type === "creating-rect") {
+            const shape = findShapeById(editorState.scene, interaction.previewShapeId);
+
+            if (!shape || shape.type !== "rect") return;
+
+            const preview = makeRectFromDrag(
+                interaction.startPoint,
+                point,
+                interaction.previewShapeId
+            );
+
+            shape.origin = preview.origin;
+            shape.width = preview.width;
+            shape.height = preview.height;
+
+            render();
+            return;
+        }
 
         if (interaction.type === "resizing-rect") {
             const shape = findShapeById(editorState.scene, interaction.shapeId);
@@ -291,6 +368,40 @@ function main(): void {
             event.clientY - rect.top
         );
 
+        if (interaction.type === "creating-rect") {
+            const shape = findShapeById(editorState.scene, interaction.previewShapeId);
+            const previewId = interaction.previewShapeId;
+
+            if (shape && shape.type === "rect") {
+                const finalRect = {
+                    ...shape,
+                    style: {
+                        fill: "#4f46e5",
+                        stroke: "#111111",
+                        strokeWidth: 2,
+                    },
+                };
+
+                // remove preview node
+                editorState.scene.nodes = editorState.scene.nodes.filter((node) => {
+                    return !(node.type === "shape" && node.shape.id === previewId);
+                });
+
+                //only commit if it has visible size
+                if (finalRect.width > 2 && finalRect.height > 2) {
+                    history.execute(new AddShapeCommand(editorState, finalRect));
+                    editorState.selectedShapeId = finalRect.id;
+                } else {
+                    editorState.selectedShapeId = null;
+                }
+            }
+
+            interaction = { type: "idle" };
+            activeTool = "select";
+            render();
+            return;
+        }
+
         if (interaction.type === "resizing-rect") {
             const shape = findShapeById(editorState.scene, interaction.shapeId);
             if (shape && shape.type === "rect") {
@@ -346,7 +457,17 @@ function main(): void {
     });
 
     canvas.addEventListener("mouseleave", () => {
+        if (interaction.type === "creating-rect") {
+            const previewId = interaction.previewShapeId;
+            editorState.scene.nodes = editorState.scene.nodes.filter((node) => {
+                return !(node.type === "shape" && node.shape.id === previewId);
+            });
+
+            editorState.selectedShapeId = null;
+        }
+
         interaction = { type: "idle" };
+        render();
     });
 
     window.addEventListener("keydown", (event) => {

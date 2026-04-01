@@ -17,3 +17,8 @@ export type InteractionMode =
     startWidth: number;
     startHeight: number;
 }
+| {
+    type: "creating-rect";
+    startPoint: Vec2;
+    previewShapeId: string;
+}
