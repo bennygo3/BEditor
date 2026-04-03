@@ -1,1 +1,1 @@
-export type Tool = "select" | "rect";
+export type Tool = "select" | "rect" | "ellipse";

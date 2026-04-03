@@ -15,6 +15,7 @@ import {
     sceneToSvg,
     AddShapeCommand,
     generateId,
+    DeleteShapeCommand,
     type RectShape,
     type EllipseShape,
     type InteractionMode,
@@ -92,6 +93,31 @@ function makeRectFromDrag(startPoint: { x: number; y: number }, endPoint: { x: n
     // function allows the drag to work in any direction
 }
 
+function makeEllipseFromDrag(
+    startPoint: { x: number; y: number },
+    endPoint: { x: number; y: number },
+    id: string
+) : EllipseShape {
+    const centerX = (startPoint.x + endPoint.x) / 2;
+    const centerY = (startPoint.y + endPoint.y) / 2;
+    const radiusX = Math.abs(endPoint.x - startPoint.x) / 2;
+    const radiusY = Math.abs(endPoint.y - startPoint.y) / 2;
+
+    return {
+        type: "ellipse",
+        id,
+        center: vec2(centerX, centerY),
+        radiusX,
+        radiusY,
+        transform: identityTransform(),
+        style: {
+            fill: "#fca5a555",
+            stroke: "#5c1f1f",
+            strokeWidth: 2,
+        },
+    };
+}
+
 function main(): void {
     const canvas = document.getElementById("editor-canvas") as HTMLCanvasElement;
     if (!canvas) {
@@ -116,15 +142,16 @@ function main(): void {
     const exportButton = document.getElementById("export-svg") as HTMLButtonElement | null;
     const selectToolButton = document.getElementById("tool-select") as HTMLButtonElement | null;
     const rectToolButton = document.getElementById("rect-tool") as HTMLButtonElement | null;
+    const ellipseToolButton = document.getElementById("ellipse-tool") as HTMLButtonElement | null;
 
 
     console.log("saveButton:", saveButton);
     console.log("loadButton:", loadButton);
     console.log("exportButton", exportButton);
     
-    if (!saveButton || !loadButton || !exportButton || !selectToolButton || !rectToolButton) {
+    if (!saveButton || !loadButton || !exportButton || !selectToolButton || !rectToolButton || !ellipseToolButton) {
         // throw new Error("Save/load buttons not found");
-        console.error("Save/load/export buttons not found")
+        console.error("Save/load/export/etc buttons not found")
         return;
     }
 
@@ -177,6 +204,11 @@ function main(): void {
         console.log("Active tool: rect");
     });
 
+    ellipseToolButton.addEventListener("click", () => {
+        activeTool = "ellipse";
+        console.log("Active tool: ellipse");
+    })
+
     let interaction: InteractionMode = { type: "idle" };
 
         function render(): void {
@@ -214,6 +246,21 @@ function main(): void {
             editorState.selectedShapeId = previewShapeId;
             interaction = {
                 type: "creating-rect",
+                startPoint: point,
+                previewShapeId,
+            };
+
+            render();
+            return;
+        }
+
+        if (activeTool === "ellipse") {
+            const previewShapeId = generateId("ellipse");
+
+            const previewEllipse = makeEllipseFromDrag(point, point, previewShapeId);
+            editorState.scene.nodes.push({ type: "shape", shape: previewEllipse});
+            interaction = {
+                type: "creating-ellipse",
                 startPoint: point,
                 previewShapeId,
             };
@@ -336,6 +383,25 @@ function main(): void {
             return;
         }
 
+        if (interaction.type === "creating-ellipse") {
+            const shape = findShapeById(editorState.scene, interaction.previewShapeId);
+
+            if (!shape || shape.type !== "ellipse") return;
+
+            const preview = makeEllipseFromDrag(
+                interaction.startPoint,
+                point,
+                interaction.previewShapeId
+            );
+
+            shape.center = preview.center;
+            shape.radiusX = preview.radiusX;
+            shape.radiusY = preview.radiusY;
+
+            render();
+            return;
+        }
+
         if (interaction.type !== "dragging") return;
 
         const dx = point.x - interaction.lastPointer.x;
@@ -424,6 +490,38 @@ function main(): void {
             return;
         }
 
+        if (interaction.type === "creating-ellipse") {
+            const shape = findShapeById(editorState.scene, interaction.previewShapeId);
+            const previewId = interaction.previewShapeId;
+
+            if (shape && shape.type === "ellipse") {
+                const finalEllipse = {
+                    ...shape,
+                    style:{
+                        fill: "#e63946",
+                        stroke: "#333333",
+                        strokeWidth: 2,
+                    },
+                };
+
+                editorState.scene.nodes = editorState.scene.nodes.filter((node) => {
+                    return !(node.type === "shape" && node.shape.id === previewId);
+                });
+
+                if (finalEllipse.radiusX > 2 && finalEllipse.radiusY > 2) {
+                    history.execute(new AddShapeCommand(editorState, finalEllipse));
+                    editorState.selectedShapeId = finalEllipse.id;
+                } else {
+                    editorState.selectedShapeId = null;
+                }
+            }
+
+            interaction = { type: "idle" };
+            activeTool = "select";
+            render();
+            return;
+        }
+
         if (interaction.type !== "dragging") return;
 
         const totalDelta = vec2(
@@ -457,8 +555,9 @@ function main(): void {
     });
 
     canvas.addEventListener("mouseleave", () => {
-        if (interaction.type === "creating-rect") {
+        if (interaction.type === "creating-rect" || interaction.type === "creating-ellipse") {
             const previewId = interaction.previewShapeId;
+            
             editorState.scene.nodes = editorState.scene.nodes.filter((node) => {
                 return !(node.type === "shape" && node.shape.id === previewId);
             });
@@ -473,6 +572,18 @@ function main(): void {
     window.addEventListener("keydown", (event) => {
         const isMac = navigator.userAgent.toUpperCase().includes("MAC");
         const metaOrCtrl = isMac ? event.metaKey : event.ctrlKey;
+
+        if ((event.key === "Backspace" || event.key === "Delete") && editorState.selectedShapeId) {
+            event.preventDefault();
+
+            history.execute(
+                new DeleteShapeCommand(editorState, editorState.selectedShapeId)
+            );
+
+            interaction = { type: "idle" };
+            render();
+            return;
+        }
 
         if (metaOrCtrl && event.key === "z" && !event.shiftKey) {
             history.undo();

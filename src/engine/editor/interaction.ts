@@ -18,7 +18,21 @@ export type InteractionMode =
     startHeight: number;
 }
 | {
+    type: "resizing-ellipse";
+    shapeId: string;
+    handle: "nw" | "ne" | "se" | "sw";
+    startPointer: Vec2;
+    startOrigin: Vec2;
+    startWidth: number;
+    startHeight: number;
+}
+| {
     type: "creating-rect";
+    startPoint: Vec2;
+    previewShapeId: string;
+}
+| {
+    type: "creating-ellipse";
     startPoint: Vec2;
     previewShapeId: string;
 }
