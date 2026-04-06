@@ -16,10 +16,13 @@ import {
     AddShapeCommand,
     generateId,
     DeleteShapeCommand,
+    hitTestEllipseHandle,
+    ResizeEllipseCommand,
     type RectShape,
     type EllipseShape,
     type InteractionMode,
     type Tool,
+    getShapeBoundsWorld,
 } from "./engine";
 import { CanvasRenderer } from "./renderer/canvasRenderer";
 
@@ -129,7 +132,6 @@ function main(): void {
         throw new Error("2D canvas context could not be created");
     }
 
-    // let scene = buildDemoScene();
     const scene = buildDemoScene();
     const editorState = createEditorState(scene);
     const history = new CommandHistory();
@@ -225,6 +227,10 @@ function main(): void {
                 if (shape.type === "rect") {
                     renderer.renderRectHandles(shape);
                 }
+
+                if (shape.type === "ellipse") {
+                    renderer.renderEllipseHandles(shape);
+                }
             }
         }
     } 
@@ -284,6 +290,31 @@ function main(): void {
                         startOrigin: {...selectedShape.origin },
                         startWidth: selectedShape.width,
                         startHeight: selectedShape.height,
+                    };
+
+                    render();
+                    return;
+                }
+            }
+
+            if (selectedShape && selectedShape.type === "ellipse") {
+                const handle = hitTestEllipseHandle(point, selectedShape);
+
+                if (handle) {
+                    const bounds = getShapeBoundsWorld(selectedShape);
+
+                    interaction = {
+                        type: "resizing-ellipse",
+                        shapeId: selectedShape.id,
+                        handle,
+                        startPointer: point,
+                        startBounds: {
+                            min: { ...bounds.min },
+                            max: { ...bounds.max },
+                        },
+                        startCenter: { ...selectedShape.center },
+                        startRadiusX: selectedShape.radiusX,
+                        startRadiusY: selectedShape.radiusY,
                     };
 
                     render();
@@ -397,6 +428,51 @@ function main(): void {
             shape.center = preview.center;
             shape.radiusX = preview.radiusX;
             shape.radiusY = preview.radiusY;
+
+            render();
+            return;
+        }
+
+        if (interaction.type === "resizing-ellipse") {
+            const shape = findShapeById(editorState.scene, interaction.shapeId);
+            if(!shape || shape.type !== "ellipse") return;
+
+            const dx = point.x - interaction.startPointer.x;
+            const dy = point.y - interaction.startPointer.y;
+
+            // const startLeft = interaction.startCenter.x - interaction.startRadiusX;
+            // const startRight = interaction.startCenter.x + interaction.startRadiusX;
+            // const startTop = interaction.startCenter.y - interaction.startRadiusY;
+            // const startBottom = interaction.startCenter.y + interaction.startRadiusY;
+
+            let left = interaction.startBounds.min.x;
+            let right = interaction.startBounds.max.x;
+            let top = interaction.startBounds.min.y;
+            let bottom = interaction.startBounds.max.y;
+
+            if  (interaction.handle === "se") {
+                right = interaction.startBounds.max.x + dx;
+                bottom = interaction.startBounds.max.y + dy;
+            } else if (interaction.handle === "sw") {
+                left = interaction.startBounds.min.x + dx;
+                bottom = interaction.startBounds.max.y + dy;
+            } else if (interaction.handle === "ne") {
+                right = interaction.startBounds.max.x + dx;
+                top = interaction.startBounds.min.y + dy;
+            } else if (interaction.handle === 'nw') {
+                left = interaction.startBounds.min.x + dx;
+                top = interaction.startBounds.min.y + dy;
+            }
+
+            const width = Math.max(10, right - left);
+            const height = Math.max(10, bottom - top);
+
+            shape.center = {
+                x: left + width / 2,
+                y: top + height / 2,
+            }; 
+            shape.radiusX = width / 2;
+            shape.radiusY = height / 2;
 
             render();
             return;
@@ -518,6 +594,28 @@ function main(): void {
 
             interaction = { type: "idle" };
             activeTool = "select";
+            render();
+            return;
+        }
+
+        if (interaction.type === "resizing-ellipse") {
+            const shape = findShapeById(editorState.scene, interaction.shapeId);
+            if (shape && shape.type === "ellipse") {
+                history.execute(
+                    new ResizeEllipseCommand(
+                        editorState,
+                        interaction.shapeId,
+                        interaction.startCenter,
+                        interaction.startRadiusX,
+                        interaction.startRadiusY,
+                        { ...shape.center },
+                        shape.radiusX,
+                        shape.radiusY
+                    )
+                );
+            }
+
+            interaction = { type: "idle" };
             render();
             return;
         }

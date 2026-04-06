@@ -22,9 +22,13 @@ export type InteractionMode =
     shapeId: string;
     handle: "nw" | "ne" | "se" | "sw";
     startPointer: Vec2;
-    startOrigin: Vec2;
-    startWidth: number;
-    startHeight: number;
+    startBounds: {
+        min: Vec2;
+        max: Vec2;
+    };
+    startCenter: Vec2;
+    startRadiusX: number;
+    startRadiusY: number;
 }
 | {
     type: "creating-rect";
