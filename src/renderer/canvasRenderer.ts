@@ -1,5 +1,6 @@
 import type { Shape, RectShape, EllipseShape } from "../engine/geometry/shape";
 import { getShapeBoundsWorld } from "../engine/geometry/bounds";
+import { getRotateHandleAnchor, getRotateHandlePosition } from "../engine/geometry/rotateHandles";
 import { applyTransform } from "../engine/math/transform";
 import type { Scene } from "../engine/scene/scene";
 import type { SceneNode } from "../engine/scene/node";
@@ -165,6 +166,28 @@ export class CanvasRenderer {
             bounds.max.x - bounds.min.x,
             bounds.max.y - bounds.min.y
         );
+        this.ctx.restore();
+    }
+
+    renderRotateHandle(shape: Shape): void {
+        const anchor = getRotateHandleAnchor(shape);
+        const handle = getRotateHandlePosition(shape);
+
+        this.ctx.save();
+
+        this.ctx.strokeStyle = "#16a34a";
+        this.ctx.lineWidth = 1.5;
+        this.ctx.beginPath();
+        this.ctx.moveTo(anchor.x, anchor.y);
+        this.ctx.lineTo(handle.x, handle.y);
+        this.ctx.stroke();
+
+        this.ctx.beginPath();
+        this.ctx.arc(handle.x, handle.y, 6, 0, Math.PI * 2);
+        this.ctx.fillStyle = "#ffffff";
+        this.ctx.fill();
+        this.ctx.stroke();
+
         this.ctx.restore();
     }
 }

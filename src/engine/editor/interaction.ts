@@ -9,6 +9,13 @@ export type InteractionMode =
     lastPointer: Vec2;
 }
 | {
+    type: "rotating";
+    shapeId: string;
+    fixedWorldCenter: Vec2;
+    startPointerAngle: number;
+    startRotation: number;
+}
+| {
     type: "resizing-rect";
     shapeId: string;
     handle: "nw" | "ne" | "se" | "sw";
@@ -40,3 +47,11 @@ export type InteractionMode =
     startPoint: Vec2;
     previewShapeId: string;
 }
+
+
+//     type: "rotating";
+//     shapeId: string;
+//     center: Vec2;
+//     startPointerAngle: number;
+//     startRotation: number;
+// 

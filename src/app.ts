@@ -23,6 +23,10 @@ import {
     type InteractionMode,
     type Tool,
     getShapeBoundsWorld,
+    getShapesCenterWorld,
+    setShapeRotationCenter,
+    hitTestRotateHandle,
+    RotateShapeCommand,
 } from "./engine";
 import { CanvasRenderer } from "./renderer/canvasRenderer";
 
@@ -214,15 +218,16 @@ function main(): void {
     let interaction: InteractionMode = { type: "idle" };
 
         function render(): void {
-        renderer.renderScene(editorState.scene);
+            renderer.renderScene(editorState.scene);
 
-        if (editorState.selectedShapeId) {
+            if (editorState.selectedShapeId) {
             const shape = findShapeById(
                 editorState.scene,
                 editorState.selectedShapeId
             );
             if (shape) {
                 renderer.renderBounds(shape, { color: "#16a34a" });
+                renderer.renderRotateHandle(shape);
                 
                 if (shape.type === "rect") {
                     renderer.renderRectHandles(shape);
@@ -273,6 +278,27 @@ function main(): void {
 
             render();
             return;
+        }
+
+        if (editorState.selectedShapeId) {
+            const selectedShape = findShapeById(editorState.scene, editorState.selectedShapeId);
+
+            if (selectedShape && hitTestRotateHandle(point, selectedShape)) {
+                // const center = getShapesCenter(selectedShape);
+                const fixedWorldCenter = getShapesCenterWorld(selectedShape);
+                const startPointerAngle = Math.atan2(point.y - fixedWorldCenter.y, point.x - fixedWorldCenter.x);
+
+                interaction = {
+                    type: "rotating",
+                    shapeId: selectedShape.id,
+                    fixedWorldCenter,
+                    startPointerAngle,
+                    startRotation: selectedShape.transform.rotation,
+                };
+
+                render();
+                return;
+            }
         }
 
         if (editorState.selectedShapeId) {
@@ -440,11 +466,6 @@ function main(): void {
             const dx = point.x - interaction.startPointer.x;
             const dy = point.y - interaction.startPointer.y;
 
-            // const startLeft = interaction.startCenter.x - interaction.startRadiusX;
-            // const startRight = interaction.startCenter.x + interaction.startRadiusX;
-            // const startTop = interaction.startCenter.y - interaction.startRadiusY;
-            // const startBottom = interaction.startCenter.y + interaction.startRadiusY;
-
             let left = interaction.startBounds.min.x;
             let right = interaction.startBounds.max.x;
             let top = interaction.startBounds.min.y;
@@ -473,6 +494,29 @@ function main(): void {
             }; 
             shape.radiusX = width / 2;
             shape.radiusY = height / 2;
+
+            render();
+            return;
+        }
+
+        if (interaction.type === "rotating") {
+            const shape = findShapeById(editorState.scene, interaction.shapeId);
+            if (!shape) return;
+
+            const currentAngle = Math.atan2(
+                point.y - interaction.fixedWorldCenter.y,
+                point.x - interaction.fixedWorldCenter.x
+            );
+
+            const delta = currentAngle - interaction.startPointerAngle;
+            const newRotation = interaction.startRotation + delta;
+            // shape.transform.rotation = interaction.startRotation + delta;
+
+            setShapeRotationCenter(
+                shape,
+                newRotation,
+                interaction.fixedWorldCenter
+            );
 
             render();
             return;
@@ -611,6 +655,25 @@ function main(): void {
                         { ...shape.center },
                         shape.radiusX,
                         shape.radiusY
+                    )
+                );
+            }
+
+            interaction = { type: "idle" };
+            render();
+            return;
+        }
+
+        if (interaction.type === "rotating") {
+            const shape = findShapeById(editorState.scene, interaction.shapeId);
+
+            if (shape) {
+                history.execute(
+                    new RotateShapeCommand(
+                        editorState,
+                        interaction.shapeId,
+                        interaction.startRotation,
+                        shape.transform.rotation
                     )
                 );
             }
