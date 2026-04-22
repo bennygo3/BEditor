@@ -1,6 +1,7 @@
 import type { Shape, RectShape, EllipseShape } from "../engine/geometry/shape";
 import { getShapeBoundsWorld } from "../engine/geometry/bounds";
 import { getRotateHandleAnchor, getRotateHandlePosition } from "../engine/geometry/rotateHandles";
+import { getRectHandlePositions } from "../engine";
 import { applyTransform } from "../engine/math/transform";
 import type { Scene } from "../engine/scene/scene";
 import type { SceneNode } from "../engine/scene/node";
@@ -67,17 +68,19 @@ export class CanvasRenderer {
     }
 
     renderRectHandles(shape: RectShape): void {
-        const bounds = getShapeBoundsWorld(shape);
-        const size = 8;
-        const half = size / 2;
-
+        const handlesMap = getRectHandlePositions(shape);
+        // const bounds = getShapeBoundsWorld(shape);
+        
         const handles = [
-            { x: bounds.min.x, y: bounds.min.y }, // nw
-            { x: bounds.max.x, y: bounds.min.y }, // ne
-            { x: bounds.max.x, y: bounds.max.y }, // se
-            { x: bounds.min.x, y: bounds.max.y }, // sw
+            handlesMap.nw,
+            handlesMap.ne,
+            handlesMap.se,
+            handlesMap.sw,
         ];
 
+        const size = 8;
+        const half = size / 2;
+        
         this.ctx.save();
         this.ctx.fillStyle = "#ffffff";
         this.ctx.strokeStyle = "#16a34a";

@@ -1,18 +1,31 @@
 import type { RectShape } from "./shape";
 import type { Vec2 } from "../math/vec2";
-import { getShapeBoundsWorld } from "./bounds";
+import { applyTransform } from "../math/transform";
+// import { getShapeBoundsWorld } from "./bounds";
 
 export type RectHandle = "nw" | "ne" | "se" | "sw";
 
 export function getRectHandlePositions(shape: RectShape): Record<RectHandle, Vec2> {
-    const bounds = getShapeBoundsWorld(shape);
+    const nwLocal = { x: shape.origin.x, y: shape.origin.y };
+    const neLocal = { x: shape.origin.x + shape.width, y: shape.origin.y };
+    const seLocal = { x: shape.origin.x + shape.width, y: shape.origin.y + shape.height };
+    const swLocal = { x: shape.origin.x, y: shape.origin.y + shape.height };
 
     return {
-        nw: { x: bounds.min.x, y: bounds.min.y },
-        ne: { x: bounds.max.x, y: bounds.min.y },
-        se: { x: bounds.max.x, y: bounds.max.y },
-        sw: { x: bounds.min.x, y: bounds.max.y },
-    };
+        nw: applyTransform(nwLocal, shape.transform),
+        ne: applyTransform(neLocal, shape.transform),
+        se: applyTransform(seLocal, shape.transform),
+        sw: applyTransform(swLocal, shape.transform),
+    }
+
+    // const bounds = getShapeBoundsWorld(shape);
+
+    // return {
+    //     nw: { x: bounds.min.x, y: bounds.min.y },
+    //     ne: { x: bounds.max.x, y: bounds.min.y },
+    //     se: { x: bounds.max.x, y: bounds.max.y },
+    //     sw: { x: bounds.min.x, y: bounds.max.y },
+    // };
 }
 
 export function hitTestRectHandle(

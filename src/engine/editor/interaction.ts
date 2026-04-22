@@ -20,9 +20,13 @@ export type InteractionMode =
     shapeId: string;
     handle: "nw" | "ne" | "se" | "sw";
     startPointer: Vec2;
-    startOrigin: Vec2;
-    startWidth: number;
-    startHeight: number;
+    startLeft: number;
+    startTop: number;
+    startRight: number;
+    startBottom: number;
+    // startOrigin: Vec2;
+    // startWidth: number;
+    // startHeight: number;
 }
 | {
     type: "resizing-ellipse";

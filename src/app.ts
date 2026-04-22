@@ -27,6 +27,7 @@ import {
     setShapeRotationCenter,
     hitTestRotateHandle,
     RotateShapeCommand,
+    applyInverseTransform,
 } from "./engine";
 import { CanvasRenderer } from "./renderer/canvasRenderer";
 
@@ -313,9 +314,13 @@ function main(): void {
                         shapeId: selectedShape.id,
                         handle,
                         startPointer: point,
-                        startOrigin: {...selectedShape.origin },
-                        startWidth: selectedShape.width,
-                        startHeight: selectedShape.height,
+                        startLeft: selectedShape.origin.x,
+                        startTop: selectedShape.origin.y,
+                        startRight: selectedShape.origin.x + selectedShape.width,
+                        startBottom: selectedShape.origin.y + selectedShape.height,
+                        // startOrigin: {...selectedShape.origin },
+                        // startWidth: selectedShape.width,
+                        // startHeight: selectedShape.height,
                     };
 
                     render();
@@ -404,37 +409,76 @@ function main(): void {
             const shape = findShapeById(editorState.scene, interaction.shapeId);
             if (!shape || shape.type !== "rect") return;
 
-            const dx = point.x - interaction.startPointer.x;
-            const dy = point.y - interaction.startPointer.y;
+            const localPoint = applyInverseTransform(point, shape.transform);
 
-            let newOrigin = { ...interaction.startOrigin};
-            let newWidth = interaction.startWidth;
-            let newHeight = interaction.startHeight;
+            let left = interaction.startLeft;
+            let top = interaction.startTop;
+            let right = interaction.startRight;
+            let bottom = interaction.startBottom;
 
             if (interaction.handle === "se") {
-                newWidth = interaction.startWidth + dx;
-                newHeight = interaction.startHeight + dy;
+                right = localPoint.x;
+                bottom = localPoint.y;
             } else if (interaction.handle === "sw") {
-                newOrigin.x = interaction.startOrigin.x + dx;
-                newWidth = interaction.startWidth - dx;
-                newHeight = interaction.startHeight + dy;
+                left = localPoint.x;
+                bottom = localPoint.y;
             } else if (interaction.handle === "ne") {
-                newOrigin.y = interaction.startOrigin.y + dy;
-                newWidth = interaction.startWidth + dx;
-                newHeight = interaction.startHeight - dy;
+                right = localPoint.x;
+                top = localPoint.y
             } else if (interaction.handle === "nw") {
-                newOrigin.x = interaction.startOrigin.x + dx;
-                newOrigin.y = interaction.startOrigin.y + dy;
-                newWidth = interaction.startWidth - dx;
-                newHeight = interaction.startHeight - dy;
+                left = localPoint.x;
+                top = localPoint.y;
             }
 
-            newWidth = Math.max(10, newWidth);
-            newHeight = Math.max(10, newHeight);
+            const minSize = 10;
 
-            shape.origin = newOrigin;
-            shape.width = newWidth;
-            shape.height = newHeight;
+            if (right - left < minSize) {
+                if (interaction.handle === "sw" || interaction.handle === "nw") {
+                    left = right - minSize;
+                } else {
+                    right = left + minSize;
+                }
+            }
+
+            if (bottom - top < minSize) {
+                if (interaction.handle === "nw" || interaction.handle === "ne") {
+                    top = bottom - minSize;
+                } else {
+                    bottom = top + minSize;
+                }
+            }
+
+            // const dx = point.x - interaction.startPointer.x;
+            // const dy = point.y - interaction.startPointer.y;
+
+            // let newOrigin = { ...interaction.startOrigin};
+            // let newWidth = interaction.startWidth;
+            // let newHeight = interaction.startHeight;
+
+            // if (interaction.handle === "se") {
+            //     newWidth = interaction.startWidth + dx;
+            //     newHeight = interaction.startHeight + dy;
+            // } else if (interaction.handle === "sw") {
+            //     newOrigin.x = interaction.startOrigin.x + dx;
+            //     newWidth = interaction.startWidth - dx;
+            //     newHeight = interaction.startHeight + dy;
+            // } else if (interaction.handle === "ne") {
+            //     newOrigin.y = interaction.startOrigin.y + dy;
+            //     newWidth = interaction.startWidth + dx;
+            //     newHeight = interaction.startHeight - dy;
+            // } else if (interaction.handle === "nw") {
+            //     newOrigin.x = interaction.startOrigin.x + dx;
+            //     newOrigin.y = interaction.startOrigin.y + dy;
+            //     newWidth = interaction.startWidth - dx;
+            //     newHeight = interaction.startHeight - dy;
+            // }
+
+            // newWidth = Math.max(10, newWidth);
+            // newHeight = Math.max(10, newHeight);
+
+            shape.origin = { x: left, y: top };
+            shape.width = right - left;
+            shape.height = bottom - top;
 
             render();
             return;
@@ -595,9 +639,12 @@ function main(): void {
                     new ResizeRectCommand(
                         editorState,
                         interaction.shapeId,
-                        interaction.startOrigin,
-                        interaction.startWidth,
-                        interaction.startHeight,
+                        {
+                            x: interaction.startLeft,
+                            y: interaction.startTop,
+                        },
+                        interaction.startRight - interaction.startLeft,
+                        interaction.startBottom - interaction.startTop,
                         { ...shape.origin },
                         shape.width,
                         shape.height

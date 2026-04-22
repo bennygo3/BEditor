@@ -1,23 +1,54 @@
 import type { Shape } from "./shape";
 import type { Vec2 } from "../math/vec2";
-import { getShapeBoundsWorld } from "./bounds";
+import { applyTransform } from "../math/transform";
+// import { getShapeBoundsWorld } from "./bounds";
 
-export function getRotateHandleAnchor(shape: Shape): Vec2 {
-    const bounds = getShapeBoundsWorld(shape);
+function getLocalRotateAnchor(shape: Shape): Vec2 {
+    if (shape.type === "rect") {
+        return {
+            x: shape.origin.x + shape.width,
+            y: shape.origin.y + shape.height / 2,
+        };
+    }
 
     return {
-        x: bounds.max.x,
-        y: (bounds.min.y + bounds.max.y) / 2,
+        x: shape.center.x + shape.radiusX,
+        y: shape.center.y,
     };
 }
 
-export function getRotateHandlePosition(shape: Shape, offset = 24): Vec2 {
-    const anchor = getRotateHandleAnchor(shape);
+function getLocalRotateHandle(shape: Shape, offset = 24): Vec2 {
+    if (shape.type === "rect") {
+        return {
+            x: shape.origin.x + shape.width + offset,
+            y: shape.origin.y + shape.height / 2,
+        };
+    }
 
     return {
-        x: anchor.x + offset,
-        y: anchor.y,
-    };
+        x: shape.center.x + shape.radiusX + offset,
+        y: shape.center.y,
+    }
+}
+
+export function getRotateHandleAnchor(shape: Shape): Vec2 {
+    return applyTransform(getLocalRotateAnchor(shape), shape.transform);
+    // const bounds = getShapeBoundsWorld(shape);
+
+    // return {
+    //     x: bounds.max.x,
+    //     y: (bounds.min.y + bounds.max.y) / 2,
+    // };
+}
+
+export function getRotateHandlePosition(shape: Shape, offset = 24): Vec2 {
+    return applyTransform(getLocalRotateHandle(shape, offset), shape.transform);
+    // const anchor = getRotateHandleAnchor(shape);
+
+    // return {
+    //     x: anchor.x + offset,
+    //     y: anchor.y,
+    // };
 }
 
 export function hitTestRotateHandle(point: Vec2, shape: Shape, radius = 7): boolean {
