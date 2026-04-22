@@ -39,12 +39,17 @@ export function getShapeBoundsWorld(shape: Shape): Bounds {
     // ellipse: approximate bounds using 4 cardinal points (works w/ rotation as well)
     const { center, radiusX, radiusY, transform } = shape;
 
-    const ptsLocal: Vec2[] = [
-        { x: center.x - radiusX, y: center.y },
-        { x: center.x + radiusX, y: center.y },
-        { x: center.x, y: center.y - radiusY },
-        { x: center.x, y: center.y + radiusY },
-    ];
+    const ptsLocal: Vec2[] = [];
+    const samples = 64;
+
+    for (let i = 0; i < samples; i++) {
+        const t = (i / samples) * Math.PI * 2;
+
+        ptsLocal.push({
+            x: center.x + Math.cos(t) * radiusX,
+            y: center.y + Math.sin(t) * radiusY,
+        });
+    }
 
     const ptsWorld = ptsLocal.map((p) => applyTransform(p, transform));
     return boundsFromPoints(ptsWorld);

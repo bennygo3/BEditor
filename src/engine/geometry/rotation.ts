@@ -27,7 +27,7 @@ export function setShapeRotationCenter(
     const sin = Math.sin(newRotation);
 
     const rotatedCenterX = scaledX * cos - scaledY * sin;
-    const rotatedCenterY = scaledY * sin + scaledY * cos;
+    const rotatedCenterY = scaledX * sin + scaledY * cos;
 
     shape.transform.rotation = newRotation;
     shape.transform.position.x = fixedWorldCenter.x - rotatedCenterX;

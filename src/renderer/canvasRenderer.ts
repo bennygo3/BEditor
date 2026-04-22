@@ -1,6 +1,7 @@
 import type { Shape, RectShape, EllipseShape } from "../engine/geometry/shape";
 import { getShapeBoundsWorld } from "../engine/geometry/bounds";
 import { getRotateHandleAnchor, getRotateHandlePosition } from "../engine/geometry/rotateHandles";
+import { getEllipseHandlePositions } from "../engine/geometry/ellipseHandles";
 import { getRectHandlePositions } from "../engine";
 import { applyTransform } from "../engine/math/transform";
 import type { Scene } from "../engine/scene/scene";
@@ -80,7 +81,6 @@ export class CanvasRenderer {
 
         const size = 8;
         const half = size / 2;
-        
         this.ctx.save();
         this.ctx.fillStyle = "#ffffff";
         this.ctx.strokeStyle = "#16a34a";
@@ -130,16 +130,17 @@ export class CanvasRenderer {
     }
 
     renderEllipseHandles(shape: EllipseShape): void {
-        const bounds = getShapeBoundsWorld(shape);
-        const size = 8;
-        const half = size / 2;
+        const handlesMap = getEllipseHandlePositions(shape);
 
         const handles = [
-            { x: bounds.min.x, y: bounds.min.y }, // nw
-            { x: bounds.max.x, y: bounds.min.y },
-            { x: bounds.max.x, y: bounds.max.y },
-            { x: bounds.min.x, y: bounds.max.y }, // sw
+            handlesMap.n,
+            handlesMap.e,
+            handlesMap.s,
+            handlesMap.w,
         ];
+
+        const size = 8;
+        const half = size / 2;
 
         this.ctx.save();
         this.ctx.fillStyle = "#ffffff";

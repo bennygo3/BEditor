@@ -285,7 +285,6 @@ function main(): void {
             const selectedShape = findShapeById(editorState.scene, editorState.selectedShapeId);
 
             if (selectedShape && hitTestRotateHandle(point, selectedShape)) {
-                // const center = getShapesCenter(selectedShape);
                 const fixedWorldCenter = getShapesCenterWorld(selectedShape);
                 const startPointerAngle = Math.atan2(point.y - fixedWorldCenter.y, point.x - fixedWorldCenter.x);
 
@@ -318,9 +317,6 @@ function main(): void {
                         startTop: selectedShape.origin.y,
                         startRight: selectedShape.origin.x + selectedShape.width,
                         startBottom: selectedShape.origin.y + selectedShape.height,
-                        // startOrigin: {...selectedShape.origin },
-                        // startWidth: selectedShape.width,
-                        // startHeight: selectedShape.height,
                     };
 
                     render();
@@ -332,17 +328,11 @@ function main(): void {
                 const handle = hitTestEllipseHandle(point, selectedShape);
 
                 if (handle) {
-                    const bounds = getShapeBoundsWorld(selectedShape);
-
                     interaction = {
                         type: "resizing-ellipse",
                         shapeId: selectedShape.id,
                         handle,
                         startPointer: point,
-                        startBounds: {
-                            min: { ...bounds.min },
-                            max: { ...bounds.max },
-                        },
                         startCenter: { ...selectedShape.center },
                         startRadiusX: selectedShape.radiusX,
                         startRadiusY: selectedShape.radiusY,
@@ -448,34 +438,6 @@ function main(): void {
                 }
             }
 
-            // const dx = point.x - interaction.startPointer.x;
-            // const dy = point.y - interaction.startPointer.y;
-
-            // let newOrigin = { ...interaction.startOrigin};
-            // let newWidth = interaction.startWidth;
-            // let newHeight = interaction.startHeight;
-
-            // if (interaction.handle === "se") {
-            //     newWidth = interaction.startWidth + dx;
-            //     newHeight = interaction.startHeight + dy;
-            // } else if (interaction.handle === "sw") {
-            //     newOrigin.x = interaction.startOrigin.x + dx;
-            //     newWidth = interaction.startWidth - dx;
-            //     newHeight = interaction.startHeight + dy;
-            // } else if (interaction.handle === "ne") {
-            //     newOrigin.y = interaction.startOrigin.y + dy;
-            //     newWidth = interaction.startWidth + dx;
-            //     newHeight = interaction.startHeight - dy;
-            // } else if (interaction.handle === "nw") {
-            //     newOrigin.x = interaction.startOrigin.x + dx;
-            //     newOrigin.y = interaction.startOrigin.y + dy;
-            //     newWidth = interaction.startWidth - dx;
-            //     newHeight = interaction.startHeight - dy;
-            // }
-
-            // newWidth = Math.max(10, newWidth);
-            // newHeight = Math.max(10, newHeight);
-
             shape.origin = { x: left, y: top };
             shape.width = right - left;
             shape.height = bottom - top;
@@ -507,37 +469,25 @@ function main(): void {
             const shape = findShapeById(editorState.scene, interaction.shapeId);
             if(!shape || shape.type !== "ellipse") return;
 
-            const dx = point.x - interaction.startPointer.x;
-            const dy = point.y - interaction.startPointer.y;
+            const localPoint = applyInverseTransform(point, shape.transform);
+            const minRadius = 5;
 
-            let left = interaction.startBounds.min.x;
-            let right = interaction.startBounds.max.x;
-            let top = interaction.startBounds.min.y;
-            let bottom = interaction.startBounds.max.y;
+            let newRadiusX = interaction.startRadiusX;
+            let newRadiusY = interaction.startRadiusY;
 
-            if  (interaction.handle === "se") {
-                right = interaction.startBounds.max.x + dx;
-                bottom = interaction.startBounds.max.y + dy;
-            } else if (interaction.handle === "sw") {
-                left = interaction.startBounds.min.x + dx;
-                bottom = interaction.startBounds.max.y + dy;
-            } else if (interaction.handle === "ne") {
-                right = interaction.startBounds.max.x + dx;
-                top = interaction.startBounds.min.y + dy;
-            } else if (interaction.handle === 'nw') {
-                left = interaction.startBounds.min.x + dx;
-                top = interaction.startBounds.min.y + dy;
+            if  (interaction.handle === "e") {
+                newRadiusX = Math.max(minRadius, localPoint.x - interaction.startCenter.x);
+            } else if (interaction.handle === "w") {
+                newRadiusX = Math.max(minRadius, interaction.startCenter.x - localPoint.x);
+            } else if (interaction.handle === "s") {
+                newRadiusY = Math.max(minRadius, localPoint.y - interaction.startCenter.y);
+            } else if (interaction.handle === 'n') {
+                newRadiusY = Math.max(minRadius, interaction.startCenter.y - localPoint.y);
             }
 
-            const width = Math.max(10, right - left);
-            const height = Math.max(10, bottom - top);
-
-            shape.center = {
-                x: left + width / 2,
-                y: top + height / 2,
-            }; 
-            shape.radiusX = width / 2;
-            shape.radiusY = height / 2;
+            shape.center = { ...interaction.startCenter }; 
+            shape.radiusX = newRadiusX;
+            shape.radiusY = newRadiusY;
 
             render();
             return;

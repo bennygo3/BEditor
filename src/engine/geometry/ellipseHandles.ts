@@ -1,17 +1,21 @@
 import type { EllipseShape } from "./shape";
 import type { Vec2 } from "../math/vec2";
-import { getShapeBoundsWorld } from "./bounds";
+import { applyTransform } from "../math/transform";
+// import { getShapeBoundsWorld } from "./bounds";
 
-export type EllipseHandle = "nw" | "ne" | "se" | "sw";
+export type EllipseHandle = "e" | "w" | "n" | "s";
 
 export function getEllipseHandlePositions(shape: EllipseShape): Record<EllipseHandle, Vec2> {
-    const bounds = getShapeBoundsWorld(shape);
+    const eLocal = { x: shape.center.x + shape.radiusX, y: shape.center.y };
+    const wLocal = { x: shape.center.x - shape.radiusX, y: shape.center.y };
+    const nLocal = { x: shape.center.x, y: shape.center.y - shape.radiusY };
+    const sLocal = { x: shape.center.x, y: shape.center.y + shape.radiusY };
 
     return {
-        nw: { x: bounds.min.x, y: bounds.min.y },
-        ne: { x: bounds.max.x, y: bounds.min.y },
-        se: { x: bounds.max.x, y: bounds.max.y },
-        sw: { x: bounds.min.x, y: bounds.max.y },
+        e: applyTransform(eLocal, shape.transform),
+        w: applyTransform(wLocal, shape.transform),
+        n: applyTransform(nLocal, shape.transform),
+        s: applyTransform(sLocal, shape.transform),
     };
 }
 
@@ -23,7 +27,7 @@ export function hitTestEllipseHandle(
     const half = size / 2;
     const handles = getEllipseHandlePositions(shape);
 
-    for (const handle of ["nw", "ne", "se", "sw"] as EllipseHandle[]) {
+    for (const handle of ["e", "w", "n", "s"] as EllipseHandle[]) {
         const h = handles[handle];
 
         if (

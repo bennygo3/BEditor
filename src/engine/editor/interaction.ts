@@ -31,12 +31,8 @@ export type InteractionMode =
 | {
     type: "resizing-ellipse";
     shapeId: string;
-    handle: "nw" | "ne" | "se" | "sw";
+    handle: "e" | "w" | "n" | "s";
     startPointer: Vec2;
-    startBounds: {
-        min: Vec2;
-        max: Vec2;
-    };
     startCenter: Vec2;
     startRadiusX: number;
     startRadiusY: number;
