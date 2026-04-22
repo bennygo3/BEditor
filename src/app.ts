@@ -483,6 +483,18 @@ function main(): void {
                 newRadiusY = Math.max(minRadius, localPoint.y - interaction.startCenter.y);
             } else if (interaction.handle === 'n') {
                 newRadiusY = Math.max(minRadius, interaction.startCenter.y - localPoint.y);
+            } else if (interaction.handle === "se") {
+                newRadiusX = Math.max(minRadius, localPoint.x - interaction.startCenter.x);
+                newRadiusY = Math.max(minRadius, localPoint.y - interaction.startCenter.y);
+            } else if (interaction.handle === "sw") {
+                newRadiusX = Math.max(minRadius, interaction.startCenter.x - localPoint.x);
+                newRadiusY = Math.max(minRadius, localPoint.y - interaction.startCenter.y);
+            } else if (interaction.handle === "ne") {
+                newRadiusX = Math.max(minRadius, localPoint.x - interaction.startCenter.x);
+                newRadiusY = Math.max(minRadius, interaction.startCenter.y - localPoint.y);
+            } else if (interaction.handle === "nw") {
+                newRadiusX = Math.max(minRadius, interaction.startCenter.x - localPoint.x);
+                newRadiusY = Math.max(minRadius, interaction.startCenter.y - localPoint.y);
             }
 
             shape.center = { ...interaction.startCenter }; 

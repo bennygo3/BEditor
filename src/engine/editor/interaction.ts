@@ -31,7 +31,7 @@ export type InteractionMode =
 | {
     type: "resizing-ellipse";
     shapeId: string;
-    handle: "e" | "w" | "n" | "s";
+    handle: "n" | "e" | "s" | "w" | "ne" | "nw" | "se" | "sw";
     startPointer: Vec2;
     startCenter: Vec2;
     startRadiusX: number;

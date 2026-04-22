@@ -134,9 +134,13 @@ export class CanvasRenderer {
 
         const handles = [
             handlesMap.n,
+            handlesMap.ne,
             handlesMap.e,
+            handlesMap.se,
             handlesMap.s,
+            handlesMap.sw,
             handlesMap.w,
+            handlesMap.nw,
         ];
 
         const size = 8;
