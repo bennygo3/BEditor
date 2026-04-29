@@ -27,4 +27,13 @@ export type EllipseShape = {
     style: Style;
 }
 
-export type Shape = RectShape | EllipseShape;
+export type LineShape = {
+    type: "line";
+    id: string;
+    start: Vec2;
+    end: Vec2;
+    transform: Transform;
+    style: Style;
+}
+
+export type Shape = RectShape | EllipseShape | LineShape;

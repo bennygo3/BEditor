@@ -9,9 +9,6 @@ export type InteractionMode =
     shapeId: string;
     dragStart: Vec2;
     lastPointer: Vec2;
-    // mousdown -> set interaction = dragging
-    // mousemove -> update shape position 
-    // mouseup -> commit MoveShapeCommand
 }
 | {
     type: "rotating";
@@ -19,9 +16,6 @@ export type InteractionMode =
     fixedWorldCenter: Vec2;
     startPointerAngle: number;
     startRotation: number;
-    // mousedown -> interaction = rotating
-    // mousemove -> compute delta angle
-    // commit RotateCommand
 }
 | {
     type: "resizing-rect";
@@ -32,9 +26,6 @@ export type InteractionMode =
     startTop: number;
     startRight: number;
     startBottom: number;
-    // mousedown -> interaction = resizing
-    // mousemove -> update width/height (preview)
-    // mouseup -> commit ResizeCommand
 }
 | {
     type: "resizing-ellipse";
@@ -52,6 +43,11 @@ export type InteractionMode =
 }
 | {
     type: "creating-ellipse";
+    startPoint: Vec2;
+    previewShapeId: string;
+}
+| {
+    type: "creating-line";
     startPoint: Vec2;
     previewShapeId: string;
 }

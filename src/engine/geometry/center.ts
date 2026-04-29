@@ -12,6 +12,15 @@ export function getShapesCenterWorld(shape: Shape): Vec2 {
         return applyTransform(localCenter, shape.transform);
     }
 
-    // ellipse
+    if (shape.type === "line") {
+        const localCenter = {
+            x: (shape.start.x + shape.end.x) / 2,
+            y: (shape.start.y + shape.end.y) / 2,
+        };
+
+        return applyTransform(localCenter, shape.transform)
+    }
+
+    // ellipse:
     return applyTransform(shape.center, shape.transform);
 }

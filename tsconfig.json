@@ -2,7 +2,9 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "CommonJS",
-    "moduleResolution": "Node",
+    // "moduleResolution": "bundler",
+    "moduleResolution": "node",
+    "ignoreDeprecations": "6.0", // will switch to bundler
     "rootDir": "./src",
     "outDir": "./dist",
     "lib": ["ES2020", "DOM"],

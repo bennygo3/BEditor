@@ -9,6 +9,13 @@ function getLocalCenter(shape: Shape): Vec2 {
         };
     }
 
+    if (shape.type === "line") {
+        return {
+            x: (shape.start.x + shape.end.x) / 2,
+            y: (shape.start.y + shape.end.y) / 2,
+        };
+    }
+
     return { ...shape.center };
 }
 

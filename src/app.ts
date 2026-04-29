@@ -20,9 +20,10 @@ import {
     ResizeEllipseCommand,
     type RectShape,
     type EllipseShape,
+    type LineShape,
     type InteractionMode,
     type Tool,
-    getShapeBoundsWorld,
+    // getShapeBoundsWorld,
     getShapesCenterWorld,
     setShapeRotationCenter,
     hitTestRotateHandle,
@@ -126,6 +127,25 @@ function makeEllipseFromDrag(
     };
 }
 
+function makeLineFromDrag(
+    startPoint: { x: number; y: number },
+    endPoint: { x: number; y: number },
+    id: string,
+    preview = false
+) : LineShape {
+    return {
+        type: "line",
+        id,
+        start: vec2(startPoint.x, startPoint.y),
+        end: vec2(endPoint.x, endPoint.y),
+        transform: identityTransform(),
+        style: {
+            stroke: preview ? "#7777" : "#000000",
+            strokeWidth: preview ? 1 : 2,
+        },
+    };
+}
+
 function main(): void {
     const canvas = document.getElementById("editor-canvas") as HTMLCanvasElement;
     if (!canvas) {
@@ -150,14 +170,9 @@ function main(): void {
     const selectToolButton = document.getElementById("tool-select") as HTMLButtonElement | null;
     const rectToolButton = document.getElementById("rect-tool") as HTMLButtonElement | null;
     const ellipseToolButton = document.getElementById("ellipse-tool") as HTMLButtonElement | null;
-
-
-    console.log("saveButton:", saveButton);
-    console.log("loadButton:", loadButton);
-    console.log("exportButton", exportButton);
+    const lineToolButton = document.getElementById("line-tool") as HTMLButtonElement | null;
     
-    if (!saveButton || !loadButton || !exportButton || !selectToolButton || !rectToolButton || !ellipseToolButton) {
-        // throw new Error("Save/load buttons not found");
+    if (!saveButton || !loadButton || !exportButton || !selectToolButton || !rectToolButton || !ellipseToolButton || !lineToolButton) {
         console.error("Save/load/export/etc buttons not found")
         return;
     }
@@ -214,6 +229,11 @@ function main(): void {
     ellipseToolButton.addEventListener("click", () => {
         activeTool = "ellipse";
         console.log("Active tool: ellipse");
+    });
+
+    lineToolButton.addEventListener("click", () => {
+        activeTool = "line";
+        console.log("Active tool: line")
     })
 
     let interaction: InteractionMode = { type: "idle" };
@@ -273,6 +293,23 @@ function main(): void {
             editorState.scene.nodes.push({ type: "shape", shape: previewEllipse});
             interaction = {
                 type: "creating-ellipse",
+                startPoint: point,
+                previewShapeId,
+            };
+
+            render();
+            return;
+        }
+
+        if (activeTool === "line") {
+            const previewShapeId = generateId("line");
+
+            const previewLine = makeLineFromDrag(point, point, previewShapeId, true);
+            editorState.scene.nodes.push({ type: "shape", shape: previewLine });
+
+            editorState.selectedShapeId = previewShapeId;
+            interaction = {
+                type: "creating-line",
                 startPoint: point,
                 previewShapeId,
             };
@@ -505,6 +542,25 @@ function main(): void {
             return;
         }
 
+        if (interaction.type === "creating-line") {
+            const shape = findShapeById(editorState.scene, interaction.previewShapeId);
+
+            if (!shape || shape.type !== "line") return;
+
+            const preview = makeLineFromDrag(
+                interaction.startPoint,
+                point,
+                interaction.previewShapeId,
+                true
+            );
+
+            shape.start = preview.start;
+            shape.end = preview.end;
+
+            render();
+            return;
+        }
+
         if (interaction.type === "rotating") {
             const shape = findShapeById(editorState.scene, interaction.shapeId);
             if (!shape) return;
@@ -673,6 +729,40 @@ function main(): void {
             return;
         }
 
+        if (interaction.type === "creating-line") {
+            const shape = findShapeById(editorState.scene, interaction.previewShapeId);
+            const previewId = interaction.previewShapeId;
+
+            if (shape && shape.type === "line") {
+                const drawnLine = makeLineFromDrag(
+                    shape.start,
+                    shape.end,
+                    shape.id,
+                    false
+                );
+
+                editorState.scene.nodes = editorState.scene.nodes.filter((node) => {
+                    return !(node.type === "shape" && node.shape.id === previewId);
+                });
+
+                const dx = drawnLine.end.x - drawnLine.start.x;
+                const dy = drawnLine.end.y - drawnLine.start.y;
+                const length = Math.hypot(dx, dy);
+
+                if (length > 2) {
+                    history.execute(new AddShapeCommand(editorState, drawnLine));
+                    editorState.selectedShapeId = drawnLine.id;
+                } else {
+                    editorState.selectedShapeId = null;
+                }
+            }
+
+            interaction = { type: "idle" };
+            activeTool = "select";
+            render();
+            return;
+        }
+
         if (interaction.type === "rotating") {
             const shape = findShapeById(editorState.scene, interaction.shapeId);
 
@@ -725,7 +815,10 @@ function main(): void {
     });
 
     canvas.addEventListener("mouseleave", () => {
-        if (interaction.type === "creating-rect" || interaction.type === "creating-ellipse") {
+        if (interaction.type === "creating-rect" || 
+            interaction.type === "creating-ellipse" ||
+            interaction.type === "creating-line"
+        ) {
             const previewId = interaction.previewShapeId;
             
             editorState.scene.nodes = editorState.scene.nodes.filter((node) => {

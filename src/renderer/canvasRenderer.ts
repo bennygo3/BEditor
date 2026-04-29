@@ -1,4 +1,4 @@
-import type { Shape, RectShape, EllipseShape } from "../engine/geometry/shape";
+import type { Shape, RectShape, EllipseShape, LineShape } from "../engine/geometry/shape";
 import { getShapeBoundsWorld } from "../engine/geometry/bounds";
 import { getRotateHandleAnchor, getRotateHandlePosition } from "../engine/geometry/rotateHandles";
 import { getEllipseHandlePositions } from "../engine/geometry/ellipseHandles";
@@ -40,6 +40,12 @@ export class CanvasRenderer {
 
         if (shape.type === "ellipse") {
             this.renderEllipse(shape);
+            return;
+        }
+
+        if (shape.type === "line") {
+            this.renderLine(shape);
+            return;
         }
 
         // above: shape specific drawing
@@ -133,6 +139,28 @@ export class CanvasRenderer {
         this.ctx.strokeStyle = shape.style.stroke ?? "#222";
         this.ctx.lineWidth = shape.style.strokeWidth ?? 1;
         this.ctx.stroke();
+    }
+
+    private renderLine(shape: LineShape): void {
+        const start = applyTransform(shape.start, shape.transform);
+        const end = applyTransform(shape.end, shape.transform);
+
+        this.ctx.save();
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(start.x, start.y);
+        this.ctx.lineTo(end.x, end.y);
+
+        this.ctx.strokeStyle = shape.style.stroke ?? "#000";
+        this.ctx.lineWidth = shape.style.strokeWidth ?? 2;
+
+        if (shape.style.stroke === "#777777") {
+            this.ctx.setLineDash([6, 4]);
+        }
+
+        this.ctx.stroke();
+
+        this.ctx.restore();
     }
 
     renderEllipseHandles(shape: EllipseShape): void {

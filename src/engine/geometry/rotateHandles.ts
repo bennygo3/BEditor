@@ -11,6 +11,10 @@ function getLocalRotateAnchor(shape: Shape): Vec2 {
         };
     }
 
+    if (shape.type === "line") {
+        return { ...shape.end };
+    }
+
     return {
         x: shape.center.x + shape.radiusX,
         y: shape.center.y,
@@ -22,6 +26,17 @@ function getLocalRotateHandle(shape: Shape, offset = 24): Vec2 {
         return {
             x: shape.origin.x + shape.width + offset,
             y: shape.origin.y + shape.height / 2,
+        };
+    }
+
+    if (shape.type === "line") {
+        const dx = shape.end.x - shape.start.x;
+        const dy = shape.end.y - shape.start.y;
+        const length = Math.hypot(dx, dy) || 1;
+
+        return {
+            x: shape.end.x + (dx / length) * offset,
+            y: shape.end.y + (dy / length) * offset,
         };
     }
 
