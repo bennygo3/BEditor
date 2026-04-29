@@ -2,7 +2,7 @@ import type { Shape, RectShape, EllipseShape } from "../engine/geometry/shape";
 import { getShapeBoundsWorld } from "../engine/geometry/bounds";
 import { getRotateHandleAnchor, getRotateHandlePosition } from "../engine/geometry/rotateHandles";
 import { getEllipseHandlePositions } from "../engine/geometry/ellipseHandles";
-import { getRectHandlePositions } from "../engine";
+import { getRectHandlePositions } from "../engine/geometry/rectHandles";
 import { applyTransform } from "../engine/math/transform";
 import type { Scene } from "../engine/scene/scene";
 import type { SceneNode } from "../engine/scene/node";
@@ -11,7 +11,7 @@ import type { Vec2 } from "../engine/math/vec2";
 export class CanvasRenderer {
     constructor(private ctx: CanvasRenderingContext2D) {}
 
-    renderScene(scene: Scene): void {
+    renderScene(scene: Scene): void {       // Scene data
         const { canvas } = this.ctx;
 
         this.ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -41,6 +41,8 @@ export class CanvasRenderer {
         if (shape.type === "ellipse") {
             this.renderEllipse(shape);
         }
+
+        // above: shape specific drawing
     }
 
     private renderRect(shape: RectShape): void {
@@ -49,7 +51,7 @@ export class CanvasRenderer {
             { x: shape.origin.x + shape.width, y: shape.origin.y },
             { x: shape.origin.x + shape.width, y: shape.origin.y + shape.height },
             { x: shape.origin.x, y: shape.origin.y + shape.height },
-        ].map((p) => applyTransform(p, shape.transform));
+        ].map((p) => applyTransform(p, shape.transform));   // .map transforms each corner into the world space
 
         this.ctx.beginPath();
         this.ctx.moveTo(corners[0].x, corners[0].y);
@@ -66,6 +68,8 @@ export class CanvasRenderer {
         this.ctx.strokeStyle = shape.style.stroke ?? "#222";
         this.ctx.lineWidth = shape.style.strokeWidth ?? 1;
         this.ctx.stroke();
+
+        // lines are drawn between each corner
     }
 
     renderRectHandles(shape: RectShape): void {
@@ -97,7 +101,7 @@ export class CanvasRenderer {
     }
 
     private renderEllipse(shape: EllipseShape): void {
-        const steps = 48;
+        const steps = 48;   // ellipse is technically drawn as a many-sided polygon. With 48 steps it looks smooth enough
         const points: Vec2[] = [];
 
         for (let i = 0; i < steps; i++) {
@@ -105,6 +109,8 @@ export class CanvasRenderer {
             const localPoint = {
                 x: shape.center.x + Math.cos(t) * shape.radiusX,
                 y: shape.center.y + Math.sin(t) * shape.radiusY,
+
+                // cos and sin logic above approximates an ellipse by sampling points aoround a circle/ellipse
             };
 
             points.push(applyTransform(localPoint, shape.transform));
@@ -162,7 +168,7 @@ export class CanvasRenderer {
     }
 
     renderBounds(shape: Shape, options?: { color?: string }): void {
-        const bounds = getShapeBoundsWorld(shape);
+        const bounds = getShapeBoundsWorld(shape);    // draws the dashed selection box. bounds are calculated by the engine, then drawn by the renderer. 
 
         this.ctx.save();
         this.ctx.strokeStyle = options?.color ?? "#00aaff";
@@ -198,4 +204,7 @@ export class CanvasRenderer {
 
         this.ctx.restore();
     }
+    // renderRact/renderEllipse = pixels on canvas - actual artwork
+
+    // renderRectHandles(), renderEllipseHandles(), renderRotateHandle(), renderBounds(): these methods draw editor UI, not the actual shapes - editor UI overlay
 }
