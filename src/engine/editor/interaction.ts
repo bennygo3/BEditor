@@ -1,12 +1,17 @@
 import type { Vec2 } from "../math/vec2";
 
+// interaction mode = which mode is the editor currently in?
+
 export type InteractionMode = 
 | { type: "idle" }
 | {
-    type: "dragging";
+    type: "dragging"; 
     shapeId: string;
     dragStart: Vec2;
     lastPointer: Vec2;
+    // mousdown -> set interaction = dragging
+    // mousemove -> update shape position 
+    // mouseup -> commit MoveShapeCommand
 }
 | {
     type: "rotating";
@@ -14,6 +19,9 @@ export type InteractionMode =
     fixedWorldCenter: Vec2;
     startPointerAngle: number;
     startRotation: number;
+    // mousedown -> interaction = rotating
+    // mousemove -> compute delta angle
+    // commit RotateCommand
 }
 | {
     type: "resizing-rect";
@@ -24,9 +32,9 @@ export type InteractionMode =
     startTop: number;
     startRight: number;
     startBottom: number;
-    // startOrigin: Vec2;
-    // startWidth: number;
-    // startHeight: number;
+    // mousedown -> interaction = resizing
+    // mousemove -> update width/height (preview)
+    // mouseup -> commit ResizeCommand
 }
 | {
     type: "resizing-ellipse";
@@ -47,11 +55,3 @@ export type InteractionMode =
     startPoint: Vec2;
     previewShapeId: string;
 }
-
-
-//     type: "rotating";
-//     shapeId: string;
-//     center: Vec2;
-//     startPointerAngle: number;
-//     startRotation: number;
-// 
