@@ -9,6 +9,7 @@ import {
     SelectShapeCommand,
     MoveShapeCommand,
     hitTestRectHandle,
+    hitTestLineHandle,
     ResizeRectCommand,
     serializeScene,
     deserializeScene,
@@ -257,6 +258,10 @@ function main(): void {
                 if (shape.type === "ellipse") {
                     renderer.renderEllipseHandles(shape);
                 }
+
+                if (shape.type === "line") {
+                    renderer.renderLineHandles(shape);
+                }
             }
         }
     } 
@@ -373,6 +378,21 @@ function main(): void {
                         startCenter: { ...selectedShape.center },
                         startRadiusX: selectedShape.radiusX,
                         startRadiusY: selectedShape.radiusY,
+                    };
+
+                    render();
+                    return;
+                }
+            }
+
+            if (selectedShape && selectedShape.type === "line") {
+                const handle = hitTestLineHandle(point, selectedShape);
+
+                if (handle) {
+                    interaction = {
+                        type: "resizing-line",
+                        shapeId: selectedShape.id,
+                        handle,
                     };
 
                     render();
@@ -556,6 +576,23 @@ function main(): void {
 
             shape.start = preview.start;
             shape.end = preview.end;
+
+            render();
+            return;
+        }
+
+        if (interaction.type === "resizing-line") {
+            const shape = findShapeById(editorState.scene, interaction.shapeId);
+            if (!shape || shape.type !== "line") return;
+
+            // allows resizing to work correctly even if the line has been rotated:
+            const localPoint = applyInverseTransform(point, shape.transform);
+
+            if (interaction.handle === "start") {
+                shape.start = localPoint;
+            } else {
+                shape.end = localPoint;
+            }
 
             render();
             return;
@@ -759,6 +796,12 @@ function main(): void {
 
             interaction = { type: "idle" };
             activeTool = "select";
+            render();
+            return;
+        }
+
+        if (interaction.type === "resizing-line") {
+            interaction = { type: "idle" };
             render();
             return;
         }

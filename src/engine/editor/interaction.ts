@@ -51,3 +51,8 @@ export type InteractionMode =
     startPoint: Vec2;
     previewShapeId: string;
 }
+| {
+    type: "resizing-line";
+    shapeId: string;
+    handle: "start" | "end";
+}

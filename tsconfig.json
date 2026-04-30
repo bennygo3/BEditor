@@ -4,7 +4,7 @@
     "module": "CommonJS",
     // "moduleResolution": "bundler",
     "moduleResolution": "node",
-    "ignoreDeprecations": "6.0", // will switch to bundler
+    "ignoreDeprecations": "6.0", 
     "rootDir": "./src",
     "outDir": "./dist",
     "lib": ["ES2020", "DOM"],

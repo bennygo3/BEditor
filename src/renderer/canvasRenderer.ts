@@ -3,6 +3,7 @@ import { getShapeBoundsWorld } from "../engine/geometry/bounds";
 import { getRotateHandleAnchor, getRotateHandlePosition } from "../engine/geometry/rotateHandles";
 import { getEllipseHandlePositions } from "../engine/geometry/ellipseHandles";
 import { getRectHandlePositions } from "../engine/geometry/rectHandles";
+import { getLineHandlePositions } from "../engine/geometry/lineHandles";
 import { applyTransform } from "../engine/math/transform";
 import type { Scene } from "../engine/scene/scene";
 import type { SceneNode } from "../engine/scene/node";
@@ -159,6 +160,27 @@ export class CanvasRenderer {
         }
 
         this.ctx.stroke();
+
+        this.ctx.restore();
+    }
+
+    renderLineHandles(shape: LineShape): void {
+        const handles = getLineHandlePositions(shape);
+
+        const size = 8;
+        const half = size / 2;
+
+        this.ctx.save();
+        this.ctx.fillStyle = "#ffffff";
+        this.ctx.strokeStyle = "#16a34a";
+        this.ctx.lineWidth = 1.5;
+
+        for (const h of [handles.start, handles.end]) {
+            this.ctx.beginPath();
+            this.ctx.rect(h.x - half, h.y - half, size, size);
+            this.ctx.fill();
+            this.ctx.stroke();
+        }
 
         this.ctx.restore();
     }
