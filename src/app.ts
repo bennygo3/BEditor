@@ -10,7 +10,9 @@ import {
     MoveShapeCommand,
     hitTestRectHandle,
     hitTestLineHandle,
+    ResizeLineCommand,
     ResizeRectCommand,
+    ResizeEllipseCommand,
     serializeScene,
     deserializeScene,
     sceneToSvg,
@@ -18,7 +20,6 @@ import {
     generateId,
     DeleteShapeCommand,
     hitTestEllipseHandle,
-    ResizeEllipseCommand,
     type RectShape,
     type EllipseShape,
     type LineShape,
@@ -393,6 +394,8 @@ function main(): void {
                         type: "resizing-line",
                         shapeId: selectedShape.id,
                         handle,
+                        startStart: { ...selectedShape.start },
+                        startEnd: { ...selectedShape.end },
                     };
 
                     render();
@@ -801,6 +804,21 @@ function main(): void {
         }
 
         if (interaction.type === "resizing-line") {
+            const shape = findShapeById(editorState.scene, interaction.shapeId);
+
+            if (shape && shape.type === "line") {
+                history.execute(
+                    new ResizeLineCommand(
+                        editorState,
+                        interaction.shapeId,
+                        interaction.startStart,
+                        interaction.startEnd,
+                        { ...shape.start },
+                        { ...shape.end }
+                    )
+                );
+            }
+            
             interaction = { type: "idle" };
             render();
             return;

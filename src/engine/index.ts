@@ -4,6 +4,7 @@ export * from "./commands/deleteShapeCommand";
 export * from "./commands/history";
 export * from "./commands/moveShapeCommand";
 export * from "./commands/resizeEllipseCommand";
+export * from "./commands/resizeLineCommand";
 export * from "./commands/resizeRectCommand";
 export * from "./commands/rotateShapeCommand";
 export * from "./commands/selectShapeCommand";
