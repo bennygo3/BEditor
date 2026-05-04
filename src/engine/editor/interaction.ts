@@ -5,7 +5,7 @@ import type { Vec2 } from "../math/vec2";
 export type InteractionMode = 
 | { type: "idle" }
 | {
-    type: "dragging"; 
+    type: "dragging";
     shapeId: string;
     dragStart: Vec2;
     lastPointer: Vec2;
@@ -57,4 +57,9 @@ export type InteractionMode =
     handle: "start" | "end";
     startStart: Vec2;
     startEnd: Vec2;
+}
+| {
+    type: "marquee-selecting";
+    startPoint: Vec2;
+    currentPoint: Vec2;
 }

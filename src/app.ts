@@ -25,12 +25,13 @@ import {
     type LineShape,
     type InteractionMode,
     type Tool,
-    // getShapeBoundsWorld,
     getShapesCenterWorld,
     setShapeRotationCenter,
     hitTestRotateHandle,
     RotateShapeCommand,
     applyInverseTransform,
+    getShapeBoundsWorld,
+    boundsIntersect,
 } from "./engine";
 import { CanvasRenderer } from "./renderer/canvasRenderer";
 
@@ -108,7 +109,7 @@ function makeEllipseFromDrag(
     startPoint: { x: number; y: number },
     endPoint: { x: number; y: number },
     id: string
-) : EllipseShape {
+): EllipseShape {
     const centerX = (startPoint.x + endPoint.x) / 2;
     const centerY = (startPoint.y + endPoint.y) / 2;
     const radiusX = Math.abs(endPoint.x - startPoint.x) / 2;
@@ -129,12 +130,25 @@ function makeEllipseFromDrag(
     };
 }
 
+function makeBoundsFromPoints(a: { x: number; y: number }, b: { x: number; y: number }) {
+    return {
+        min: {
+            x: Math.min(a.x, b.x),
+            y: Math.min(a.y, b.y),
+        },
+        max: {
+            x: Math.max(a.x, b.x),
+            y: Math.max(a.y, b.y),
+        },
+    };
+}
+
 function makeLineFromDrag(
     startPoint: { x: number; y: number },
     endPoint: { x: number; y: number },
     id: string,
     preview = false
-) : LineShape {
+): LineShape {
     return {
         type: "line",
         id,
@@ -163,7 +177,7 @@ function main(): void {
     const editorState = createEditorState(scene);
     const history = new CommandHistory();
     const renderer = new CanvasRenderer(ctx);
-    
+
     let activeTool: Tool = "select";
 
     const saveButton = document.getElementById("save-scene") as HTMLButtonElement | null;
@@ -173,7 +187,7 @@ function main(): void {
     const rectToolButton = document.getElementById("rect-tool") as HTMLButtonElement | null;
     const ellipseToolButton = document.getElementById("ellipse-tool") as HTMLButtonElement | null;
     const lineToolButton = document.getElementById("line-tool") as HTMLButtonElement | null;
-    
+
     if (!saveButton || !loadButton || !exportButton || !selectToolButton || !rectToolButton || !ellipseToolButton || !lineToolButton) {
         console.error("Save/load/export/etc buttons not found")
         return;
@@ -240,18 +254,31 @@ function main(): void {
 
     let interaction: InteractionMode = { type: "idle" };
 
-        function render(): void {
-            renderer.renderScene(editorState.scene);
+    function render(): void {
+        renderer.renderScene(editorState.scene);
 
-            if (editorState.selectedShapeId) {
+        // Multi-selected shapes
+        for (const selectedId of editorState.selectedShapeIds) {
+            if (selectedId === editorState.selectedShapeId) continue;
+
+            const shape = findShapeById(editorState.scene, selectedId);
+
+            if (shape) {
+                renderer.renderBounds(shape, { color: "rgb(22, 163, 74)" });
+            }
+        }
+
+        // Primary selected shape
+        if (editorState.selectedShapeId) {
             const shape = findShapeById(
                 editorState.scene,
                 editorState.selectedShapeId
             );
+
             if (shape) {
                 renderer.renderBounds(shape, { color: "#16a34a" });
                 renderer.renderRotateHandle(shape);
-                
+
                 if (shape.type === "rect") {
                     renderer.renderRectHandles(shape);
                 }
@@ -263,20 +290,31 @@ function main(): void {
                 if (shape.type === "line") {
                     renderer.renderLineHandles(shape);
                 }
-
-                if (
-                    editorState.hoveredShapeId &&
-                    editorState.hoveredShapeId !== editorState.hoveredShapeId
-                ) {
-                    const hoveredShape = findShapeById(editorState.scene, editorState.hoveredShapeId);
-
-                    if (hoveredShape) {
-                        renderer.renderBounds(hoveredShape, { color: "#94a3b8"})
-                    }
-                }
             }
         }
-    } 
+
+        if (
+            editorState.hoveredShapeId &&
+            editorState.hoveredShapeId !== editorState.selectedShapeId
+        ) {
+            const hoveredShape = findShapeById(
+                editorState.scene, editorState.hoveredShapeId
+            );
+
+            if (hoveredShape) {
+                renderer.renderBounds(hoveredShape, { color: "#94a3b8" })
+            }
+        }
+
+        if (interaction.type === "marquee-selecting") {
+            const marqueeBounds = makeBoundsFromPoints(
+                interaction.startPoint,
+                interaction.currentPoint
+            );
+
+            renderer.renderMarquee(marqueeBounds);
+        }
+    }
 
     canvas.addEventListener("mousedown", (event) => {
         const rect = canvas.getBoundingClientRect();
@@ -307,7 +345,7 @@ function main(): void {
             const previewShapeId = generateId("ellipse");
 
             const previewEllipse = makeEllipseFromDrag(point, point, previewShapeId);
-            editorState.scene.nodes.push({ type: "shape", shape: previewEllipse});
+            editorState.scene.nodes.push({ type: "shape", shape: previewEllipse });
             interaction = {
                 type: "creating-ellipse",
                 startPoint: point,
@@ -432,14 +470,21 @@ function main(): void {
                 lastPointer: point,
             };
         } else {
-            interaction = { type: "idle" };
+            editorState.selectedShapeId = null;
+            editorState.selectedShapeIds = [];
+
+            interaction = {
+                type: "marquee-selecting",
+                startPoint: point,
+                currentPoint: point,
+            };
         }
 
         render();
     });
 
     canvas.addEventListener("mousemove", (event) => {
-        
+
         const rect = canvas.getBoundingClientRect();
 
         const point = vec2(
@@ -448,7 +493,7 @@ function main(): void {
         );
 
         if (interaction.type === "dragging") {
-            canvas.style.cursor = "grabbing";  
+            canvas.style.cursor = "grabbing";
         }
 
         if (interaction.type === "rotating") {
@@ -463,7 +508,7 @@ function main(): void {
 
             if (editorState.selectedShapeId) {
                 const selectedShape = findShapeById(editorState.scene, editorState.selectedShapeId);
-                
+
                 if (selectedShape) {
                     if (hitTestRotateHandle(point, selectedShape)) {
                         canvas.style.cursor = "grab";
@@ -577,7 +622,7 @@ function main(): void {
 
         if (interaction.type === "resizing-ellipse") {
             const shape = findShapeById(editorState.scene, interaction.shapeId);
-            if(!shape || shape.type !== "ellipse") return;
+            if (!shape || shape.type !== "ellipse") return;
 
             const localPoint = applyInverseTransform(point, shape.transform);
             const minRadius = 5;
@@ -585,7 +630,7 @@ function main(): void {
             let newRadiusX = interaction.startRadiusX;
             let newRadiusY = interaction.startRadiusY;
 
-            if  (interaction.handle === "e") {
+            if (interaction.handle === "e") {
                 newRadiusX = Math.max(minRadius, localPoint.x - interaction.startCenter.x);
             } else if (interaction.handle === "w") {
                 newRadiusX = Math.max(minRadius, interaction.startCenter.x - localPoint.x);
@@ -607,7 +652,7 @@ function main(): void {
                 newRadiusY = Math.max(minRadius, interaction.startCenter.y - localPoint.y);
             }
 
-            shape.center = { ...interaction.startCenter }; 
+            shape.center = { ...interaction.startCenter };
             shape.radiusX = newRadiusX;
             shape.radiusY = newRadiusY;
 
@@ -646,6 +691,16 @@ function main(): void {
             } else {
                 shape.end = localPoint;
             }
+
+            render();
+            return;
+        }
+
+        if (interaction.type === "marquee-selecting") {
+            interaction = {
+                ...interaction,
+                currentPoint: point,
+            };
 
             render();
             return;
@@ -706,6 +761,32 @@ function main(): void {
             event.clientY - rect.top
         );
 
+        if (interaction.type === "marquee-selecting") {
+            const marqueeBounds = makeBoundsFromPoints(
+                interaction.startPoint,
+                interaction.currentPoint
+            );
+
+            const selectedIds: string[] = [];
+
+            for (const node of editorState.scene.nodes) {
+                if (node.type !== "shape") continue;
+
+                const shapeBounds = getShapeBoundsWorld(node.shape);
+
+                if (boundsIntersect(marqueeBounds, shapeBounds)) {
+                    selectedIds.push(node.shape.id);
+                }
+            }
+
+            editorState.selectedShapeIds = selectedIds;
+            editorState.selectedShapeId = selectedIds.length === 1 ? selectedIds[0] : null;
+
+            interaction = { type: "idle" };
+            render();
+            return;
+        }
+
         if (interaction.type === "creating-rect") {
             const shape = findShapeById(editorState.scene, interaction.previewShapeId);
             const previewId = interaction.previewShapeId;
@@ -760,7 +841,7 @@ function main(): void {
                 );
             }
 
-            interaction = { type: "idle"};
+            interaction = { type: "idle" };
             render();
             return;
         }
@@ -772,7 +853,7 @@ function main(): void {
             if (shape && shape.type === "ellipse") {
                 const finalEllipse = {
                     ...shape,
-                    style:{
+                    style: {
                         fill: "#e63946",
                         stroke: "#333333",
                         strokeWidth: 2,
@@ -868,7 +949,7 @@ function main(): void {
                     )
                 );
             }
-            
+
             interaction = { type: "idle" };
             render();
             return;
@@ -926,12 +1007,12 @@ function main(): void {
     });
 
     canvas.addEventListener("mouseleave", () => {
-        if (interaction.type === "creating-rect" || 
+        if (interaction.type === "creating-rect" ||
             interaction.type === "creating-ellipse" ||
             interaction.type === "creating-line"
         ) {
             const previewId = interaction.previewShapeId;
-            
+
             editorState.scene.nodes = editorState.scene.nodes.filter((node) => {
                 return !(node.type === "shape" && node.shape.id === previewId);
             });
@@ -965,7 +1046,7 @@ function main(): void {
         }
 
         if (
-            metaOrCtrl && 
+            metaOrCtrl &&
             (event.key === "y" || (event.key === "z" && event.shiftKey))
         ) {
             history.redo();

@@ -254,6 +254,25 @@ export class CanvasRenderer {
 
         this.ctx.restore();
     }
+
+    renderMarquee(bounds: { min: Vec2; max: Vec2 }): void {
+        this.ctx.save();
+
+        const x = bounds.min.x;
+        const y = bounds.min.y;
+        const width = bounds.max.x - bounds.min.x;
+        const height = bounds.max.y - bounds.min.y;
+
+        this.ctx.fillStyle = "rgba(59, 130, 246, 0.12)";
+        this.ctx.strokeStyle = "rgb(59, 130, 246)";
+        this.ctx.lineWidth = 1;
+        this.ctx.setLineDash([6, 4]);
+
+        this.ctx.fillRect(x, y, width, height);
+        this.ctx.strokeRect(x, y, width, height);
+
+        this.ctx.restore();
+    }
     // renderRact/renderEllipse = pixels on canvas - actual artwork
 
     // renderRectHandles(), renderEllipseHandles(), renderRotateHandle(), renderBounds(): these methods draw editor UI, not the actual shapes - editor UI overlay

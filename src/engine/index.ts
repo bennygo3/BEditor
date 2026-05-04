@@ -13,6 +13,7 @@ export * from "./editor/state";
 export * from "./editor/tool";
 export * from "./export/svg";
 export * from "./geometry/bounds";
+export * from "./geometry/boundsIntersect";
 export * from "./geometry/center";
 export * from "./geometry/ellipseHandles";
 export * from "./geometry/hitTest";
