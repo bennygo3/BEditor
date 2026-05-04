@@ -6,7 +6,7 @@ export type InteractionMode =
 | { type: "idle" }
 | {
     type: "dragging";
-    shapeId: string;
+    shapeIds: string[];
     dragStart: Vec2;
     lastPointer: Vec2;
 }

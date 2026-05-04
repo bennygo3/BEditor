@@ -36,3 +36,31 @@ export class MoveShapeCommand implements Command {
 // MoveShapeCommand stores a delta vector representing how far the shape should move. The do() method applies the delta, and undo() applis the inverse delta. this makes undo straightforward without 
 // ... needing to store the full previous state and aligns naturally with drag interactions which produce relative mvmt
 // * commands should not "own" objects. they should reference them indirectly = Decoupling
+
+export class MoveShapesCommand implements Command {
+    constructor(
+        private editorState: EditorState,
+        private shapeIds: string[],
+        private delta: Vec2
+    ) {}
+
+    do(): void {
+        for (const id of this.shapeIds) {
+            const shape = findShapeById(this.editorState.scene, id);
+            if (!shape) continue;
+
+            shape.transform.position.x += this.delta.x;
+            shape.transform.position.y += this.delta.y;
+        }
+    }
+
+    undo(): void {
+        for (const id of this.shapeIds) {
+            const shape = findShapeById(this.editorState.scene, id);
+            if (!shape) continue;
+
+            shape.transform.position.x -= this.delta.x;
+            shape.transform.position.y -= this.delta.y;
+        }
+    }
+}

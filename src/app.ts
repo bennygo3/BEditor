@@ -7,7 +7,8 @@ import {
     findShapeById,
     CommandHistory,
     SelectShapeCommand,
-    MoveShapeCommand,
+    // MoveShapeCommand,
+    MoveShapesCommand,
     hitTestRectHandle,
     hitTestLineHandle,
     ResizeLineCommand,
@@ -184,11 +185,12 @@ function main(): void {
     const loadButton = document.getElementById("load-scene") as HTMLButtonElement | null;
     const exportButton = document.getElementById("export-svg") as HTMLButtonElement | null;
     const selectToolButton = document.getElementById("tool-select") as HTMLButtonElement | null;
+    const multiSelectToolButton = document.getElementById("multi-select") as HTMLButtonElement | null;
     const rectToolButton = document.getElementById("rect-tool") as HTMLButtonElement | null;
     const ellipseToolButton = document.getElementById("ellipse-tool") as HTMLButtonElement | null;
     const lineToolButton = document.getElementById("line-tool") as HTMLButtonElement | null;
 
-    if (!saveButton || !loadButton || !exportButton || !selectToolButton || !rectToolButton || !ellipseToolButton || !lineToolButton) {
+    if (!saveButton || !loadButton || !exportButton || !selectToolButton || !multiSelectToolButton || !rectToolButton || !ellipseToolButton || !lineToolButton) {
         console.error("Save/load/export/etc buttons not found")
         return;
     }
@@ -235,6 +237,11 @@ function main(): void {
     selectToolButton.addEventListener("click", () => {
         activeTool = "select";
         console.log("Active tool: select");
+    });
+
+    multiSelectToolButton.addEventListener("click", () => {
+        activeTool = "multi-select";
+        console.log("Active tool: multi-select");
     });
 
     rectToolButton.addEventListener("click", () => {
@@ -462,10 +469,44 @@ function main(): void {
             )
         );
 
+        if (hit && activeTool === "multi-select") {
+            if (editorState.selectedShapeIds.includes(hit.id)) {
+                editorState.selectedShapeIds = editorState.selectedShapeIds.filter(
+                    (id) => id !== hit.id
+                );
+            } else {
+                editorState.selectedShapeIds = [
+                    ...editorState.selectedShapeIds,
+                    hit.id
+                ];
+            }
+
+            editorState.selectedShapeId =
+            editorState.selectedShapeIds.length === 1
+                ? editorState.selectedShapeIds[0]
+                : null;
+            
+            interaction = { type: "idle" };
+            render();
+            return;
+        }
+
         if (hit) {
+
+            if (!editorState.selectedShapeIds.includes(hit.id)) {
+                editorState.selectedShapeIds = [hit.id];
+                editorState.selectedShapeId = hit.id;
+            }
+
+            const shapeIds = 
+            editorState.selectedShapeIds.length > 0 &&
+            editorState.selectedShapeIds.includes(hit.id)
+                ? editorState.selectedShapeIds
+                : [hit.id];
+
             interaction = {
                 type: "dragging",
-                shapeId: hit.id,
+                shapeIds,
                 dragStart: point,
                 lastPointer: point,
             };
@@ -734,16 +775,24 @@ function main(): void {
         const dx = point.x - interaction.lastPointer.x;
         const dy = point.y - interaction.lastPointer.y;
 
-        const shape = findShapeById(
-            editorState.scene,
-            interaction.shapeId
-        );
+        for (const id of interaction.shapeIds) {
+            const shape = findShapeById(editorState.scene, id);
+            if (!shape) continue;
 
-        if (!shape) return;
+            shape.transform.position.x += dx;
+            shape.transform.position.y += dy;
+        }
+
+        // const shape = findShapeById(
+        //     editorState.scene,
+        //     interaction.shapeId
+        // );
+
+        // if (!shape) return;
 
         // live preview movement (Not a command yet)
-        shape.transform.position.x += dx;
-        shape.transform.position.y += dy;
+        // shape.transform.position.x += dx;
+        // shape.transform.position.y += dy;
 
         interaction = {
             ...interaction,
@@ -981,22 +1030,31 @@ function main(): void {
             point.y - interaction.dragStart.y
         );
 
-        // revert the preview movement
-        const shape = findShapeById(
-            editorState.scene,
-            interaction.shapeId
-        );
+        for (const id of interaction.shapeIds) {
+            const shape = findShapeById(editorState.scene, id);
 
-        if (shape) {
+            if (!shape) continue;
+
             shape.transform.position.x -= totalDelta.x;
             shape.transform.position.y -= totalDelta.y;
         }
 
+        // revert the preview movement
+        // const shape = findShapeById(
+        //     editorState.scene,
+        //     interaction.shapeIds
+        // );
+
+        // if (shape) {
+        //     shape.transform.position.x -= totalDelta.x;
+        //     shape.transform.position.y -= totalDelta.y;
+        // }
+
         // commit as a command
         history.execute(
-            new MoveShapeCommand(
+            new MoveShapesCommand(
                 editorState,
-                interaction.shapeId,
+                interaction.shapeIds,
                 totalDelta
             )
         );
