@@ -263,6 +263,17 @@ function main(): void {
                 if (shape.type === "line") {
                     renderer.renderLineHandles(shape);
                 }
+
+                if (
+                    editorState.hoveredShapeId &&
+                    editorState.hoveredShapeId !== editorState.hoveredShapeId
+                ) {
+                    const hoveredShape = findShapeById(editorState.scene, editorState.hoveredShapeId);
+
+                    if (hoveredShape) {
+                        renderer.renderBounds(hoveredShape, { color: "#94a3b8"})
+                    }
+                }
             }
         }
     } 
@@ -435,6 +446,45 @@ function main(): void {
             event.clientX - rect.left,
             event.clientY - rect.top
         );
+
+        if (interaction.type === "dragging") {
+            canvas.style.cursor = "grabbing";  
+        }
+
+        if (interaction.type === "rotating") {
+            canvas.style.cursor = "grabbing";
+        }
+
+        if (interaction.type === "idle") {
+            const hit = findTopmostShapeAtPoint(point, editorState.scene);
+            editorState.hoveredShapeId = hit ? hit.id : null;
+
+            canvas.style.cursor = hit ? "move" : "default";
+
+            if (editorState.selectedShapeId) {
+                const selectedShape = findShapeById(editorState.scene, editorState.selectedShapeId);
+                
+                if (selectedShape) {
+                    if (hitTestRotateHandle(point, selectedShape)) {
+                        canvas.style.cursor = "grab";
+                    }
+
+                    if (selectedShape.type === "rect" && hitTestRectHandle(point, selectedShape)) {
+                        canvas.style.cursor = "nwse-resize";
+                    }
+
+                    if (selectedShape.type === "ellipse" && hitTestEllipseHandle(point, selectedShape)) {
+                        canvas.style.cursor = "crosshair";
+                    }
+
+                    if (selectedShape.type === "line" && hitTestLineHandle(point, selectedShape)) {
+                        canvas.style.cursor = "pointer";
+                    }
+                }
+            }
+
+            render();
+        }
 
         if (interaction.type === "creating-rect") {
             const shape = findShapeById(editorState.scene, interaction.previewShapeId);
