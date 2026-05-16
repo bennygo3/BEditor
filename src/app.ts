@@ -462,12 +462,12 @@ function main(): void {
 
         const hit = findTopmostShapeAtPoint(point, editorState.scene);
 
-        history.execute(
-            new SelectShapeCommand(
-                editorState,
-                hit ? hit.id : null
-            )
-        );
+        // history.execute(
+        //     new SelectShapeCommand(
+        //         editorState,
+        //         hit ? hit.id : null
+        //     )
+        // );
 
         if (hit && activeTool === "multi-select") {
             if (editorState.selectedShapeIds.includes(hit.id)) {
@@ -493,16 +493,27 @@ function main(): void {
 
         if (hit) {
 
-            if (!editorState.selectedShapeIds.includes(hit.id)) {
+            const clickedSelectedShape = editorState.selectedShapeIds.includes(hit.id);
+
+            const shapeIds = clickedSelectedShape && editorState.selectedShapeIds.length > 1
+            ? editorState.selectedShapeIds
+            : [hit.id];
+
+            if (!clickedSelectedShape) {
                 editorState.selectedShapeIds = [hit.id];
                 editorState.selectedShapeId = hit.id;
             }
 
-            const shapeIds = 
-            editorState.selectedShapeIds.length > 0 &&
-            editorState.selectedShapeIds.includes(hit.id)
-                ? editorState.selectedShapeIds
-                : [hit.id];
+            // if (!editorState.selectedShapeIds.includes(hit.id)) {
+            //     editorState.selectedShapeIds = [hit.id];
+            //     editorState.selectedShapeId = hit.id;
+            // }
+
+            // const shapeIds = 
+            // editorState.selectedShapeIds.length > 0 &&
+            // editorState.selectedShapeIds.includes(hit.id)
+            //     ? editorState.selectedShapeIds
+            //     : [hit.id];
 
             interaction = {
                 type: "dragging",
@@ -783,17 +794,6 @@ function main(): void {
             shape.transform.position.y += dy;
         }
 
-        // const shape = findShapeById(
-        //     editorState.scene,
-        //     interaction.shapeId
-        // );
-
-        // if (!shape) return;
-
-        // live preview movement (Not a command yet)
-        // shape.transform.position.x += dx;
-        // shape.transform.position.y += dy;
-
         interaction = {
             ...interaction,
             lastPointer: point,
@@ -1039,22 +1039,11 @@ function main(): void {
             shape.transform.position.y -= totalDelta.y;
         }
 
-        // revert the preview movement
-        // const shape = findShapeById(
-        //     editorState.scene,
-        //     interaction.shapeIds
-        // );
-
-        // if (shape) {
-        //     shape.transform.position.x -= totalDelta.x;
-        //     shape.transform.position.y -= totalDelta.y;
-        // }
-
         // commit as a command
         history.execute(
             new MoveShapesCommand(
                 editorState,
-                interaction.shapeIds,
+                [...interaction.shapeIds],
                 totalDelta
             )
         );
