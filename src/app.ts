@@ -180,6 +180,12 @@ function main(): void {
     const renderer = new CanvasRenderer(ctx);
 
     let activeTool: Tool = "select";
+    
+    let currentStyle = {
+        fill: "#4f46e5",
+        stroke: "#111111",
+        strokeWidth: 2,
+    };
 
     const saveButton = document.getElementById("save-scene") as HTMLButtonElement | null;
     const loadButton = document.getElementById("load-scene") as HTMLButtonElement | null;
@@ -190,9 +196,35 @@ function main(): void {
     const ellipseToolButton = document.getElementById("ellipse-tool") as HTMLButtonElement | null;
     const lineToolButton = document.getElementById("line-tool") as HTMLButtonElement | null;
 
-    if (!saveButton || !loadButton || !exportButton || !selectToolButton || !multiSelectToolButton || !rectToolButton || !ellipseToolButton || !lineToolButton) {
-        console.error("Save/load/export/etc buttons not found")
+    const fillColorInput = document.getElementById("fill-color") as HTMLInputElement | null;
+    const strokeColorInput = document.getElementById("stroke-color") as HTMLInputElement | null;
+    const strokeWidthInput = document.getElementById("stroke-width") as HTMLInputElement | null;
+
+    if (!saveButton || !loadButton || !exportButton || !selectToolButton || !multiSelectToolButton || !rectToolButton || !ellipseToolButton || !lineToolButton || !fillColorInput || !strokeColorInput || !strokeWidthInput) {
+        console.error("Save/load/export/etc buttons not found");
         return;
+    }
+
+    function applyCurrentStyleToSelection(): void {
+        const ids = editorState.selectedShapeIds.length > 0
+        ? editorState.selectedShapeIds
+        : editorState.selectedShapeId
+        ? [editorState.selectedShapeId]
+        : [];
+
+        for (const id of ids) {
+            const shape = findShapeById(editorState.scene, id);
+            if (!shape) continue;
+
+            if (shape.type !== "line") {
+                shape.style.fill = currentStyle.fill;
+            }
+
+            shape.style.stroke = currentStyle.stroke;
+            shape.style.strokeWidth = currentStyle.strokeWidth;
+        }
+
+        render();
     }
 
     saveButton.addEventListener("click", () => {
@@ -257,7 +289,22 @@ function main(): void {
     lineToolButton.addEventListener("click", () => {
         activeTool = "line";
         console.log("Active tool: line")
-    })
+    });
+
+    fillColorInput.addEventListener("input", () => {
+        currentStyle.fill = fillColorInput.value;
+        applyCurrentStyleToSelection();
+    });
+
+    strokeColorInput.addEventListener("input", () => {
+        currentStyle.stroke = strokeColorInput.value;
+        applyCurrentStyleToSelection();
+    });
+
+    strokeWidthInput.addEventListener("input", () => {
+        currentStyle.strokeWidth = Number(strokeWidthInput.value) || 0;
+        applyCurrentStyleToSelection();
+    });
 
     let interaction: InteractionMode = { type: "idle" };
 
@@ -844,10 +891,15 @@ function main(): void {
                 const finalRect = {
                     ...shape,
                     style: {
-                        fill: "#4f46e5",
-                        stroke: "#111111",
-                        strokeWidth: 2,
+                        fill: currentStyle.fill,
+                        stroke: currentStyle.stroke,
+                        strokeWidth: currentStyle.strokeWidth,
                     },
+                    // style: {
+                    //     fill: "#4f46e5",
+                    //     stroke: "#111111",
+                    //     strokeWidth: 2,
+                    // },
                 };
 
                 // remove preview node
@@ -903,10 +955,15 @@ function main(): void {
                 const finalEllipse = {
                     ...shape,
                     style: {
-                        fill: "#e63946",
-                        stroke: "#333333",
-                        strokeWidth: 2,
+                        fill: currentStyle.fill,
+                        stroke: currentStyle.stroke,
+                        strokeWidth: currentStyle.strokeWidth,
                     },
+                    // style: {
+                    //     fill: "#e63946",
+                    //     stroke: "#333333",
+                    //     strokeWidth: 2,
+                    // },
                 };
 
                 editorState.scene.nodes = editorState.scene.nodes.filter((node) => {
@@ -960,6 +1017,11 @@ function main(): void {
                     shape.id,
                     false
                 );
+
+                drawnLine.style = {
+                    stroke: currentStyle.stroke,
+                    strokeWidth: currentStyle.strokeWidth,
+                }
 
                 editorState.scene.nodes = editorState.scene.nodes.filter((node) => {
                     return !(node.type === "shape" && node.shape.id === previewId);
