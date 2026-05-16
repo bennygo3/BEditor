@@ -2,7 +2,7 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
-        <title>Logo Editor Preview</title>
+        <title>Logo Editor</title>
         <style>
             body {
                 margin: 0;
@@ -17,18 +17,33 @@
             }
 
             .topbar {
-                padding: 12px 16px;
+                display: flex;
+                justify-content: center;
+                padding: 12px;
                 background: #111;
                 color: white;
                 font-size: 14px;
+                margin-bottom: 15px;
+            }
+
+            .toolbar {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                outline: thick ridge rgb(245, 239, 49);
+                margin: 10px auto;
+                height: 45px;
+                width: 500px;
+                gap: 15px;
+
             }
 
             .workspace {
                 flex: 1;
                 display: flex;
-                justify-content: center;
+                justify-content: space-evenly;
                 align-items: center;
-                padding: 24px;
+                
             }
 
             canvas {
@@ -48,6 +63,7 @@
     </head>
     <body>
         <div class="app-shell">
+            <header style="margin: 0 auto;">°°°Logo Editor Engine°°°</header>
             <div class="topbar">
                 <button id="tool-select">Select Tool</button>
                 <button id="multi-select">Multi Select</button>
@@ -57,10 +73,23 @@
                 <button id="save-scene">Save Scene</button>
                 <button id="load-scene">Load Scene</button>
                 <button id="export-svg">Export SVG</button>
-                <span style="margin-left: 15px;">Logo Editor Engine Preview</span>
+            </div>
+            <div class="toolbar">
+                <label>
+                    Fill:
+                    <input id="fill-color" type="color" value="#4f46e5" />
+                </label>
+                <label>
+                    Stroke:
+                    <input id="stroke-color" type="color" value="#111111" />
+                </label>
+                <label>
+                    Stroke Width:
+                    <input id="stroke-width" type="number" value="2" min="0" max="20" />
+                </label>
             </div>
             <div class="workspace">
-                <canvas id="editor-canvas" width="900" height="600"></canvas>
+                <canvas id="editor-canvas" width="900" height="700"></canvas>
             </div>       
         </div>
 
