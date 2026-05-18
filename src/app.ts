@@ -187,6 +187,10 @@ function main(): void {
         strokeWidth: 2,
     };
 
+    const fillColorInput = document.getElementById("fill-color") as HTMLInputElement | null;
+    const strokeColorInput = document.getElementById("stroke-color") as HTMLInputElement | null;
+    const strokeWidthInput = document.getElementById("stroke-width") as HTMLInputElement | null;
+
     const saveButton = document.getElementById("save-scene") as HTMLButtonElement | null;
     const loadButton = document.getElementById("load-scene") as HTMLButtonElement | null;
     const exportButton = document.getElementById("export-svg") as HTMLButtonElement | null;
@@ -196,14 +200,14 @@ function main(): void {
     const ellipseToolButton = document.getElementById("ellipse-tool") as HTMLButtonElement | null;
     const lineToolButton = document.getElementById("line-tool") as HTMLButtonElement | null;
 
-    const fillColorInput = document.getElementById("fill-color") as HTMLInputElement | null;
-    const strokeColorInput = document.getElementById("stroke-color") as HTMLInputElement | null;
-    const strokeWidthInput = document.getElementById("stroke-width") as HTMLInputElement | null;
-
     if (!saveButton || !loadButton || !exportButton || !selectToolButton || !multiSelectToolButton || !rectToolButton || !ellipseToolButton || !lineToolButton || !fillColorInput || !strokeColorInput || !strokeWidthInput) {
         console.error("Save/load/export/etc buttons not found");
         return;
     }
+
+    const fillColor = fillColorInput;
+    const strokeColor = strokeColorInput;
+    const strokeWidth = strokeWidthInput;
 
     function applyCurrentStyleToSelection(): void {
         const ids = editorState.selectedShapeIds.length > 0
@@ -225,6 +229,28 @@ function main(): void {
         }
 
         render();
+    }
+
+
+
+    function syncPaletteToShape(shapeId: string): void {
+        const selected = findShapeById(editorState.scene, shapeId);
+        if (!selected) return;
+
+        if (selected.style.fill && selected.type !== "line") {
+            fillColor.value = selected.style.fill;
+            currentStyle.fill = selected.style.fill;
+        }
+
+        if (selected.style.stroke) {
+            strokeColor.value = selected.style.stroke;
+            currentStyle.stroke = selected.style.stroke;
+        }
+
+        if (selected.style.strokeWidth !== undefined) {
+            strokeWidth.value = String(selected.style.strokeWidth);
+            currentStyle.strokeWidth = selected.style.strokeWidth;
+        }
     }
 
     saveButton.addEventListener("click", () => {
@@ -551,17 +577,8 @@ function main(): void {
                 editorState.selectedShapeId = hit.id;
             }
 
-            // if (!editorState.selectedShapeIds.includes(hit.id)) {
-            //     editorState.selectedShapeIds = [hit.id];
-            //     editorState.selectedShapeId = hit.id;
-            // }
-
-            // const shapeIds = 
-            // editorState.selectedShapeIds.length > 0 &&
-            // editorState.selectedShapeIds.includes(hit.id)
-            //     ? editorState.selectedShapeIds
-            //     : [hit.id];
-
+            syncPaletteToShape(hit.id);
+            
             interaction = {
                 type: "dragging",
                 shapeIds,

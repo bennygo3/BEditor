@@ -42,7 +42,21 @@ export function getShapeBoundsWorld(shape: Shape): Bounds {
             applyTransform(shape.end, shape.transform),
         ];
 
-        return boundsFromPoints(pointsWorld);
+        const bounds = boundsFromPoints(pointsWorld);
+        const padding = 8;
+
+        return {
+            min: {
+                x: bounds.min.x - padding,
+                y: bounds.min.y - padding,
+            },
+            max: {
+                x: bounds.max.x + padding,
+                y: bounds.max.y + padding,
+            },
+        };
+
+        // return boundsFromPoints(pointsWorld);
     }
 
     // ellipse: approximate bounds using 4 cardinal points (works w/ rotation as well)
