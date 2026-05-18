@@ -20,6 +20,7 @@ import {
     AddShapeCommand,
     generateId,
     DeleteShapeCommand,
+    DeleteShapesCommand,
     hitTestEllipseHandle,
     type RectShape,
     type EllipseShape,
@@ -230,8 +231,6 @@ function main(): void {
 
         render();
     }
-
-
 
     function syncPaletteToShape(shapeId: string): void {
         const selected = findShapeById(editorState.scene, shapeId);
@@ -578,7 +577,7 @@ function main(): void {
             }
 
             syncPaletteToShape(hit.id);
-            
+
             interaction = {
                 type: "dragging",
                 shapeIds,
@@ -1154,11 +1153,19 @@ function main(): void {
         const isMac = navigator.userAgent.toUpperCase().includes("MAC");
         const metaOrCtrl = isMac ? event.metaKey : event.ctrlKey;
 
-        if ((event.key === "Backspace" || event.key === "Delete") && editorState.selectedShapeId) {
+        if ((event.key === "Backspace" || event.key === "Delete") {
+            const ids = editorState.selectedShapeIds.length > 0
+            ? editorState.selectedShapeIds
+            : editorState.selectedShapeId
+            ? [editorState.selectedShapeId]
+            : [];
+
+            if (ids.length === 0) return;
+
             event.preventDefault();
 
             history.execute(
-                new DeleteShapeCommand(editorState, editorState.selectedShapeId)
+                new DeleteShapesCommand(editorState, [...ids])
             );
 
             interaction = { type: "idle" };
