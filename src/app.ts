@@ -33,6 +33,7 @@ import {
     RotateShapeCommand,
     applyInverseTransform,
     getShapeBoundsWorld,
+    getGroupBoundsWorld,
     boundsIntersect,
 } from "./engine";
 import { CanvasRenderer } from "./renderer/canvasRenderer";
@@ -162,6 +163,18 @@ function makeLineFromDrag(
             strokeWidth: preview ? 1 : 2,
         },
     };
+}
+
+function pointInsideBounds(
+    point: { x: number; y: number },
+    bounds: { min: { x: number; y: number }; max: { x: number; y: number } }
+): boolean {
+    return (
+        point.x >= bounds.min.x &&
+        point.x <= bounds.max.x &&
+        point.y >= bounds.min.y &&
+        point.y <= bounds.max.y
+    )
 }
 
 function main(): void {
@@ -344,6 +357,17 @@ function main(): void {
 
             if (shape) {
                 renderer.renderBounds(shape, { color: "rgb(22, 163, 74)" });
+            }
+        }
+
+        if (editorState.selectedShapeIds.length > 1) {
+            const groupBounds = getGroupBoundsWorld(
+                editorState.scene,
+                editorState.selectedShapeIds
+            );
+
+            if (groupBounds) {
+                renderer.renderMarquee(groupBounds);
             }
         }
 
@@ -534,12 +558,11 @@ function main(): void {
 
         const hit = findTopmostShapeAtPoint(point, editorState.scene);
 
-        // history.execute(
-        //     new SelectShapeCommand(
-        //         editorState,
-        //         hit ? hit.id : null
-        //     )
-        // );
+        const groupBounds = editorState.selectedShapeIds.length > 1
+        ? getGroupBoundsWorld(editorState.scene, editorState.selectedShapeIds)
+        : null;
+
+        const clickedInsideGroupBounds = groupBounds !== null && pointInsideBounds(point, groupBounds);
 
         if (hit && activeTool === "multi-select") {
             if (editorState.selectedShapeIds.includes(hit.id)) {
@@ -581,6 +604,13 @@ function main(): void {
             interaction = {
                 type: "dragging",
                 shapeIds,
+                dragStart: point,
+                lastPointer: point,
+            };
+        } else if (clickedInsideGroupBounds) {
+            interaction = {
+                type: "dragging",
+                shapeIds: [...editorState.selectedShapeIds],
                 dragStart: point,
                 lastPointer: point,
             };
@@ -1153,7 +1183,7 @@ function main(): void {
         const isMac = navigator.userAgent.toUpperCase().includes("MAC");
         const metaOrCtrl = isMac ? event.metaKey : event.ctrlKey;
 
-        if ((event.key === "Backspace" || event.key === "Delete") {
+        if (event.key === "Backspace" || event.key === "Delete") {
             const ids = editorState.selectedShapeIds.length > 0
             ? editorState.selectedShapeIds
             : editorState.selectedShapeId

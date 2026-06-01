@@ -16,6 +16,7 @@ export * from "./geometry/bounds";
 export * from "./geometry/boundsIntersect";
 export * from "./geometry/center";
 export * from "./geometry/ellipseHandles";
+export * from "./geometry/groupBounds";
 export * from "./geometry/hitTest";
 export * from "./geometry/lineHandles";
 export * from "./geometry/moveShape";
