@@ -27,6 +27,7 @@ import {
     type LineShape,
     type InteractionMode,
     type Tool,
+    type ImageShape,
     getShapesCenterWorld,
     setShapeRotationCenter,
     hitTestRotateHandle,
@@ -191,7 +192,7 @@ function main(): void {
     const scene = buildDemoScene();
     const editorState = createEditorState(scene);
     const history = new CommandHistory();
-    const renderer = new CanvasRenderer(ctx);
+    const renderer = new CanvasRenderer(ctx, () => render()); // callback is important because image loading is asynchronous
 
     let activeTool: Tool = "select";
     
@@ -213,8 +214,9 @@ function main(): void {
     const rectToolButton = document.getElementById("rect-tool") as HTMLButtonElement | null;
     const ellipseToolButton = document.getElementById("ellipse-tool") as HTMLButtonElement | null;
     const lineToolButton = document.getElementById("line-tool") as HTMLButtonElement | null;
+    const imageInput = document.getElementById("image-input") as HTMLInputElement | null;
 
-    if (!saveButton || !loadButton || !exportButton || !selectToolButton || !multiSelectToolButton || !rectToolButton || !ellipseToolButton || !lineToolButton || !fillColorInput || !strokeColorInput || !strokeWidthInput) {
+    if (!saveButton || !loadButton || !exportButton || !selectToolButton || !multiSelectToolButton || !rectToolButton || !ellipseToolButton || !lineToolButton || !fillColorInput || !strokeColorInput || !strokeWidthInput || !imageInput) {
         console.error("Save/load/export/etc buttons not found");
         return;
     }
@@ -343,6 +345,77 @@ function main(): void {
         currentStyle.strokeWidth = Number(strokeWidthInput.value) || 0;
         applyCurrentStyleToSelection();
     });
+
+    imageInput.addEventListener("change", () => {
+        const file = imageInput.files?.[0];
+
+        if (!file) return;
+
+        const allowedTypes = [
+            "image/png",
+            "image/jpeg",
+            "image/webp",
+        ];
+
+        if (!allowedTypes.includes(file.type)) {
+            console.error("Unsupported image type:", file.type);
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = () => {
+            if (typeof reader.result !== "string") return;
+
+            const src = reader.result;
+            const image = new Image();
+
+            image.onload = () => {
+                const maxWidth = canvas.width * 0.8;
+                const maxHeight = canvas.height * 0.8;
+
+                const scale = Math.min(
+                    1,
+                    maxWidth / image.naturalWidth,
+                    maxHeight / image.naturalHeight
+                );
+
+                const width = image.naturalWidth * scale;
+                const height = image.naturalHeight * scale;
+
+                const transform = identityTransform();
+
+                transform.position = vec2(
+                    (canvas.width - width) / 2,
+                    (canvas.height - height) / 2
+                );
+
+                const imageShape: ImageShape = {
+                    type: "image",
+                    id: generateId("image"),
+                    origin: vec2(0, 0),
+                    width,
+                    height,
+                    src,
+                    opacity: 1,
+                    transform,
+                };
+
+                history.execute(
+                    new AddShapeCommand(editorState, imageShape)
+                );
+
+                editorState.selectedShapeId = imageShape.id;
+                editorState.selectedShapeIds = [imageShape.id];
+
+                render();
+            };
+
+            image.src = src;
+        };
+
+        reader.readAsDataURL(file);
+    })
 
     let interaction: InteractionMode = { type: "idle" };
 

@@ -1,4 +1,4 @@
-import type { Shape, RectShape, EllipseShape, LineShape } from "../engine/geometry/shape";
+import type { Shape, RectShape, EllipseShape, LineShape, ImageShape } from "../engine/geometry/shape";
 import { getShapeBoundsWorld } from "../engine/geometry/bounds";
 import { getRotateHandleAnchor, getRotateHandlePosition } from "../engine/geometry/rotateHandles";
 import { getEllipseHandlePositions } from "../engine/geometry/ellipseHandles";
@@ -10,7 +10,12 @@ import type { SceneNode } from "../engine/scene/node";
 import type { Vec2 } from "../engine/math/vec2";
 
 export class CanvasRenderer {
-    constructor(private ctx: CanvasRenderingContext2D) {}
+    private imageCache = new Map<string, HTMLImageElement>();
+
+    constructor(
+        private ctx: CanvasRenderingContext2D,
+        private requestRender?: () => void
+    ) {}
 
     renderScene(scene: Scene): void {       // Scene data
         const { canvas } = this.ctx;
@@ -46,6 +51,11 @@ export class CanvasRenderer {
 
         if (shape.type === "line") {
             this.renderLine(shape);
+            return;
+        }
+
+        if (shape.type === "image") {
+            this.renderImage(shape);
             return;
         }
 
@@ -270,6 +280,58 @@ export class CanvasRenderer {
 
         this.ctx.fillRect(x, y, width, height);
         this.ctx.strokeRect(x, y, width, height);
+
+        this.ctx.restore();
+    }
+
+    private renderImage(shape: ImageShape): void {
+        let image = this.imageCache.get(shape.src);
+
+        if (!image) {
+            image = new Image();
+
+            image.onload = () => {
+                this.requestRender?.();
+            };
+
+            image.onerror = () => {
+                console.error(`unable to load image: ${shape.id}`);
+            };
+
+            image.src = shape.src;
+
+            this.imageCache.set(shape.src, image);
+
+            return;
+        }
+
+        if (!image.complete || image.naturalWidth === 0) {
+            return;
+        }
+
+        this.ctx.save();
+
+        this.ctx.translate(
+            shape.transform.position.x,
+            shape.transform.position.y
+        );
+
+        this.ctx.rotate(shape.transform.rotation);
+
+        this.ctx.scale(
+            shape.transform.scale.x,
+            shape.transform.scale.y
+        );
+
+        this.ctx.globalAlpha = shape.opacity;
+
+        this.ctx.drawImage(
+            image,
+            shape.origin.x,
+            shape.origin.y,
+            shape.width,
+            shape.height
+        );
 
         this.ctx.restore();
     }

@@ -2,7 +2,7 @@ import type { Shape } from "./shape";
 import type { Vec2 } from "../math/vec2";
 
 function getLocalCenter(shape: Shape): Vec2 {
-    if (shape.type === "rect") {
+    if (shape.type === "rect" || shape.type === "image") {
         return {
             x: shape.origin.x + shape.width / 2,
             y: shape.origin.y + shape.height / 2,

@@ -36,4 +36,15 @@ export type LineShape = {
     style: Style;
 }
 
-export type Shape = RectShape | EllipseShape | LineShape;
+export type ImageShape = {
+    type: "image";
+    id: string;
+    origin: Vec2;
+    width: number;
+    height: number;
+    src: string;
+    transform: Transform;
+    opacity: number;
+}
+
+export type Shape = RectShape | EllipseShape | LineShape | ImageShape;

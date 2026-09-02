@@ -22,7 +22,7 @@ function boundsFromPoints(points: Vec2[]): Bounds {
 }
 
 export function getShapeBoundsWorld(shape: Shape): Bounds {
-    if (shape.type === "rect") {
+    if (shape.type === "rect" || shape.type === "image") {
         const { origin, width, height, transform } = shape;
 
         const cornersLocal: Vec2[] = [

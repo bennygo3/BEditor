@@ -4,7 +4,7 @@ import { applyTransform } from "../math/transform";
 // import { getShapeBoundsWorld } from "./bounds";
 
 function getLocalRotateAnchor(shape: Shape): Vec2 {
-    if (shape.type === "rect") {
+    if (shape.type === "rect" || shape.type === "image") {
         return {
             x: shape.origin.x + shape.width,
             y: shape.origin.y + shape.height / 2,

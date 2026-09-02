@@ -3,7 +3,7 @@ import type { Vec2 } from "../math/vec2";
 import { applyTransform } from "../math/transform";
 
 export function getShapesCenterWorld(shape: Shape): Vec2 {
-    if (shape.type === "rect") {
+    if (shape.type === "rect" || shape.type === "image") {
         const localCenter = {
             x: shape.origin.x + shape.width / 2,
             y: shape.origin.y + shape.height /2,
