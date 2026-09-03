@@ -22,7 +22,7 @@ function getLocalRotateAnchor(shape: Shape): Vec2 {
 }
 
 function getLocalRotateHandle(shape: Shape, offset = 24): Vec2 {
-    if (shape.type === "rect") {
+    if (shape.type === "rect" || shape.type === "image") {
         return {
             x: shape.origin.x + shape.width + offset,
             y: shape.origin.y + shape.height / 2,

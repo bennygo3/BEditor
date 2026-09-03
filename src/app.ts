@@ -227,14 +227,19 @@ function main(): void {
 
     function applyCurrentStyleToSelection(): void {
         const ids = editorState.selectedShapeIds.length > 0
-        ? editorState.selectedShapeIds
-        : editorState.selectedShapeId
-        ? [editorState.selectedShapeId]
-        : [];
+            ? editorState.selectedShapeIds
+            : editorState.selectedShapeId
+            ? [editorState.selectedShapeId]
+            : []
+        ;
 
         for (const id of ids) {
             const shape = findShapeById(editorState.scene, id);
             if (!shape) continue;
+
+            if (shape.type === "image") {
+                continue;
+            }
 
             if (shape.type !== "line") {
                 shape.style.fill = currentStyle.fill;
@@ -250,6 +255,10 @@ function main(): void {
     function syncPaletteToShape(shapeId: string): void {
         const selected = findShapeById(editorState.scene, shapeId);
         if (!selected) return;
+
+        if (!selected || selected.type === "image") {
+            return;
+        }
 
         if (selected.style.fill && selected.type !== "line") {
             fillColor.value = selected.style.fill;
