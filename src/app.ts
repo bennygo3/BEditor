@@ -7,7 +7,6 @@ import {
     findShapeById,
     CommandHistory,
     SelectShapeCommand,
-    // MoveShapeCommand,
     MoveShapesCommand,
     hitTestRectHandle,
     hitTestLineHandle,
@@ -16,18 +15,20 @@ import {
     ResizeEllipseCommand,
     serializeScene,
     deserializeScene,
-    sceneToSvg,
     AddShapeCommand,
     generateId,
-    DeleteShapeCommand,
     DeleteShapesCommand,
     hitTestEllipseHandle,
+    exportSceneToSvg,
+    exportCanvasImage,
+    type RasterFormat,
     type RectShape,
     type EllipseShape,
     type LineShape,
     type InteractionMode,
     type Tool,
     type ImageShape,
+    type Vec2,
     getShapesCenterWorld,
     setShapeRotationCenter,
     hitTestRotateHandle,
@@ -194,8 +195,100 @@ function main(): void {
     const history = new CommandHistory();
     const renderer = new CanvasRenderer(ctx, () => render()); // callback is important because image loading is asynchronous
 
+    function getCanvasPointFromClient(
+        clientX: number,
+        clientY: number
+    ): Vec2 {
+        const rect = canvas.getBoundingClientRect();
+
+        return vec2(
+            (clientX - rect.left) * (canvas.width / rect.width),
+            (clientY - rect.top) * (canvas.height / rect.height)
+        );
+    }
+
+    function importImageFile(file: File, dropPoint?: Vec2): void {
+        const allowedTypes = [
+            "image/png",
+            "image/jpeg",
+            "image/webp",
+        ];
+
+        if (!allowedTypes.includes(file.type)) {
+            console.error("Unsupported image type:", file.type);
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = () => {
+            if (typeof reader.result !== "string") return;
+
+            const src = reader.result;
+            const image = new Image();
+
+            image.onload = () => {
+                const maxWidth = canvas.width * 0.8;
+                const maxHeight = canvas.height * 0.8;
+
+                const scale = Math.min(
+                    1,
+                    maxWidth / image.naturalWidth,
+                    maxHeight / image.naturalHeight
+                );
+
+                const width = image.naturalWidth * scale;
+                const height = image.naturalHeight * scale;
+
+                const transform = identityTransform();
+
+                if (dropPoint) {
+                    transform.position = vec2(
+                        dropPoint.x - width / 2,
+                        dropPoint.y - height / 2
+                    );
+                } else {
+                    transform.position = vec2(
+                        (canvas.width - width) / 2,
+                        (canvas.height - height) / 2
+                    );
+                }
+
+                const imageShape: ImageShape = {
+                    type: "image",
+                    id: generateId("image"),
+                    origin: vec2(0, 0),
+                    width,
+                    height,
+                    src,
+                    opacity: 1,
+                    transform,
+
+                };
+
+                history.execute(
+                    new AddShapeCommand(
+                        editorState,
+                        imageShape
+                    )
+                );
+
+                editorState.selectedShapeId = imageShape.id;
+                editorState.selectedShapeIds = [
+                    imageShape.id,
+                ];
+
+                render();
+            };
+
+            image.src = src;
+        };
+
+        reader.readAsDataURL(file);
+    }
+
     let activeTool: Tool = "select";
-    
+
     let currentStyle = {
         fill: "#4f46e5",
         stroke: "#111111",
@@ -205,16 +298,16 @@ function main(): void {
     const fillColorInput = document.getElementById("fill-color") as HTMLInputElement | null;
     const strokeColorInput = document.getElementById("stroke-color") as HTMLInputElement | null;
     const strokeWidthInput = document.getElementById("stroke-width") as HTMLInputElement | null;
-
     const saveButton = document.getElementById("save-scene") as HTMLButtonElement | null;
     const loadButton = document.getElementById("load-scene") as HTMLButtonElement | null;
-    const exportButton = document.getElementById("export-svg") as HTMLButtonElement | null;
     const selectToolButton = document.getElementById("tool-select") as HTMLButtonElement | null;
     const multiSelectToolButton = document.getElementById("multi-select") as HTMLButtonElement | null;
     const rectToolButton = document.getElementById("rect-tool") as HTMLButtonElement | null;
     const ellipseToolButton = document.getElementById("ellipse-tool") as HTMLButtonElement | null;
     const lineToolButton = document.getElementById("line-tool") as HTMLButtonElement | null;
     const imageInput = document.getElementById("image-input") as HTMLInputElement | null;
+    const exportFormat = document.getElementById("export-format") as HTMLSelectElement | null;
+    const exportButton = document.getElementById("export-button") as HTMLButtonElement | null;
 
     if (!saveButton || !loadButton || !exportButton || !selectToolButton || !multiSelectToolButton || !rectToolButton || !ellipseToolButton || !lineToolButton || !fillColorInput || !strokeColorInput || !strokeWidthInput || !imageInput) {
         console.error("Save/load/export/etc buttons not found");
@@ -229,9 +322,9 @@ function main(): void {
         const ids = editorState.selectedShapeIds.length > 0
             ? editorState.selectedShapeIds
             : editorState.selectedShapeId
-            ? [editorState.selectedShapeId]
-            : []
-        ;
+                ? [editorState.selectedShapeId]
+                : []
+            ;
 
         for (const id of ids) {
             const shape = findShapeById(editorState.scene, id);
@@ -300,19 +393,32 @@ function main(): void {
     });
 
     exportButton.addEventListener("click", () => {
-        const svg = sceneToSvg(editorState.scene, canvas.width, canvas.height);
+        const format = exportFormat?.value;
 
-        const blob = new Blob([svg], { type: "image/svg+xml" });
-        const url = URL.createObjectURL(blob);
+        if (format === "svg") {
+            exportSceneToSvg(
+                editorState.scene,
+                canvas.width,
+                canvas.height
+            );
 
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "logo-export.svg";
-        a.click();
+            return;
+        }
 
-        URL.revokeObjectURL(url);
+        if (
+            format === "png" ||
+            format === "jpeg" ||
+            format === "webp"
+        ) {
+            renderSceneOnly();
 
-        console.log("SVG exported");
+            exportCanvasImage(
+                canvas,
+                format as RasterFormat
+            );
+
+            render();
+        }
     });
 
     selectToolButton.addEventListener("click", () => {
@@ -426,6 +532,33 @@ function main(): void {
         reader.readAsDataURL(file);
     })
 
+    canvas.addEventListener("dragover", (event) => {
+        event.preventDefault();
+
+        if (event.dataTransfer) {
+            event.dataTransfer.dropEffect = "copy";
+        }
+    });
+
+    canvas.addEventListener("drop", (event) => {
+        event.preventDefault();
+
+        const files = event.dataTransfer?.files;
+
+        if (!files || files.length === 0) {
+            return;
+        }
+
+        const file = files[0];
+
+        const dropPoint = getCanvasPointFromClient(
+            event.clientX,
+            event.clientY
+        );
+
+        importImageFile(file, dropPoint);
+    });
+
     let interaction: InteractionMode = { type: "idle" };
 
     function render(): void {
@@ -499,6 +632,10 @@ function main(): void {
 
             renderer.renderMarquee(marqueeBounds);
         }
+    }
+
+    function renderSceneOnly(): void {
+        renderer.renderScene(editorState.scene);
     }
 
     canvas.addEventListener("mousedown", (event) => {
@@ -641,8 +778,8 @@ function main(): void {
         const hit = findTopmostShapeAtPoint(point, editorState.scene);
 
         const groupBounds = editorState.selectedShapeIds.length > 1
-        ? getGroupBoundsWorld(editorState.scene, editorState.selectedShapeIds)
-        : null;
+            ? getGroupBoundsWorld(editorState.scene, editorState.selectedShapeIds)
+            : null;
 
         const clickedInsideGroupBounds = groupBounds !== null && pointInsideBounds(point, groupBounds);
 
@@ -659,10 +796,10 @@ function main(): void {
             }
 
             editorState.selectedShapeId =
-            editorState.selectedShapeIds.length === 1
-                ? editorState.selectedShapeIds[0]
-                : null;
-            
+                editorState.selectedShapeIds.length === 1
+                    ? editorState.selectedShapeIds[0]
+                    : null;
+
             interaction = { type: "idle" };
             render();
             return;
@@ -673,8 +810,8 @@ function main(): void {
             const clickedSelectedShape = editorState.selectedShapeIds.includes(hit.id);
 
             const shapeIds = clickedSelectedShape && editorState.selectedShapeIds.length > 1
-            ? editorState.selectedShapeIds
-            : [hit.id];
+                ? editorState.selectedShapeIds
+                : [hit.id];
 
             if (!clickedSelectedShape) {
                 editorState.selectedShapeIds = [hit.id];
@@ -1267,10 +1404,10 @@ function main(): void {
 
         if (event.key === "Backspace" || event.key === "Delete") {
             const ids = editorState.selectedShapeIds.length > 0
-            ? editorState.selectedShapeIds
-            : editorState.selectedShapeId
-            ? [editorState.selectedShapeId]
-            : [];
+                ? editorState.selectedShapeIds
+                : editorState.selectedShapeId
+                    ? [editorState.selectedShapeId]
+                    : [];
 
             if (ids.length === 0) return;
 

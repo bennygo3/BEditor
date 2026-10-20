@@ -1,8 +1,12 @@
 import type { Scene } from "../scene/scene";
 import type { SceneNode } from "../scene/node";
-import type { Shape, RectShape, EllipseShape } from "../geometry/shape";
+import type { Shape, ImageShape, RectShape, EllipseShape, LineShape, } from "../geometry/shape";
+import { downloadBlob } from "./download";
 
-function styleToSvg(shape: Shape): string {
+
+function styleToSvg(
+    shape: RectShape | EllipseShape | LineShape
+): string {
     const fill = shape.style.fill ?? "none";
     const stroke = shape.style.stroke ?? "none";
     const strokeWidth = shape.style.strokeWidth ?? 1;
@@ -39,7 +43,23 @@ function ellipseToSvg(shape: EllipseShape): string {
     return `<ellipse cx="${shape.center.x}" cy="${shape.center.y}" rx="${shape.radiusX}" ry="${shape.radiusY}"${transformToSvg(shape)} ${styleToSvg(shape)} />`;
 }
 
+function imageToSvg(shape: ImageShape): string {
+    return `<image             
+        href="${shape.src}"
+        x="${shape.origin.x}"
+        y="${shape.origin.y}"
+        width="${shape.width}"
+        height="${shape.height}"
+        opacity="${shape.opacity}"
+        ${transformToSvg(shape)}
+    />`;
+}
+
 function shapeToSvg(shape: Shape): string {
+    if (shape.type === "image") {
+        return imageToSvg(shape);
+    }
+
     if (shape.type === "rect") {
         return rectToSvg(shape);
     }
@@ -48,7 +68,15 @@ function shapeToSvg(shape: Shape): string {
         return ellipseToSvg(shape);
     }
 
+    if (shape.type === "line") {
+        return lineToSvg(shape);
+    }
+    
     return "";
+}
+
+function lineToSvg(shape: LineShape): string {
+    return `<line x1="${shape.start.x}" y1="${shape.start.y}" x2="${shape.end.x}" y2="${shape.end.y}"${transformToSvg(shape)} ${styleToSvg(shape)} />`;
 }
 
 function nodeToSvg(node: SceneNode): string {
@@ -67,4 +95,29 @@ export function sceneToSvg(scene: Scene, width = 900, height = 600): string {
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
     ${content}
     </svg>`;
+}
+
+export function exportSceneToSvg(
+    scene: Scene,
+    width = 900,
+    height = 600,
+    filename = "bEditor-export"
+): void {
+    const svg = sceneToSvg(
+        scene,
+        width,
+        height
+    );
+
+    const blob = new Blob(
+        [svg],
+        {
+            type: "image/svg+xml;charset=utf-8",
+        }
+    );
+
+    downloadBlob(
+        blob,
+        `${filename}.svg`
+    );
 }
