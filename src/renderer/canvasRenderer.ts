@@ -5,6 +5,7 @@ import { getEllipseHandlePositions } from "../engine/geometry/ellipseHandles";
 import { getRectHandlePositions } from "../engine/geometry/rectHandles";
 import { getLineHandlePositions } from "../engine/geometry/lineHandles";
 import { applyTransform } from "../engine/math/transform";
+import { getImageHandlePositions } from "../engine";
 import type { Scene } from "../engine/scene/scene";
 import type { SceneNode } from "../engine/scene/node";
 import type { Vec2 } from "../engine/math/vec2";
@@ -332,6 +333,35 @@ export class CanvasRenderer {
             shape.width,
             shape.height
         );
+
+        this.ctx.restore();
+    }
+
+    renderImageHandles(shape: ImageShape): void {
+        const handles = getImageHandlePositions(shape);
+
+        const size = 10
+        const half = size / 2;
+
+        this.ctx.save();
+
+        this.ctx.fillStyle = "white";
+        this.ctx.strokeStyle = "rgb(22, 163, 74)";
+        this.ctx.lineWidth = 2;
+
+        for (const handle of Object.values(handles)) {
+            this.ctx.beginPath();
+
+            this.ctx.rect(
+                handle.x - half,
+                handle.y - half,
+                size,
+                size
+            );
+
+            this.ctx.fill();
+            this.ctx.stroke();
+        }
 
         this.ctx.restore();
     }

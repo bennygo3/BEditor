@@ -10,6 +10,7 @@ import {
     MoveShapesCommand,
     hitTestRectHandle,
     hitTestLineHandle,
+    hitTestImageHandle,
     ResizeLineCommand,
     ResizeRectCommand,
     ResizeEllipseCommand,
@@ -608,6 +609,10 @@ function main(): void {
                 if (shape.type === "line") {
                     renderer.renderLineHandles(shape);
                 }
+
+                if (shape.type === "image") {
+                    renderer.renderImageHandles(shape);
+                }
             }
         }
 
@@ -773,6 +778,62 @@ function main(): void {
                     return;
                 }
             }
+
+            if (selectedShape && selectedShape.type === "image") {
+                const handle = hitTestImageHandle(
+                    point,
+                    selectedShape
+                );
+
+                if (handle) {
+                    const left = selectedShape.origin.x;
+                    const top = selectedShape.origin.y;
+                    const right = selectedShape.origin.x + selectedShape.width;
+                    const bottom = selectedShape.origin.y + selectedShape.height;
+
+                    let fixedCorner: Vec2;
+
+                    if (handle === "nw") {
+                        fixedCorner = {
+                            x: right,
+                            y: bottom,
+                        };
+                    } else if (handle === "ne") {
+                        fixedCorner = {
+                            x: left,
+                            y: bottom,
+                        };
+                    } else if (handle === "sw") {
+                        fixedCorner = {
+                            x: right,
+                            y: top,
+                        };
+                    } else {
+                        fixedCorner = {
+                            x: left,
+                            y: top,
+                        };
+                    }
+
+                    interaction = {
+                        type: "resizing-image",
+                        shapeId: selectedShape.id,
+                        handle,
+                        startOrigin: {
+                            ...selectedShape.origin,
+                        },
+                        startWidth: selectedShape.width,
+                        startHeight: selectedShape.height,
+                        fixedCorner,
+                        aspectRatio: 
+                            selectedShape.width /
+                            selectedShape.height,
+                    };
+
+                    render();
+                    return;
+                }
+            }
         }
 
         const hit = findTopmostShapeAtPoint(point, editorState.scene);
@@ -888,6 +949,21 @@ function main(): void {
 
                     if (selectedShape.type === "line" && hitTestLineHandle(point, selectedShape)) {
                         canvas.style.cursor = "pointer";
+                    }
+
+                    if (selectedShape.type === "image") {
+                        const imageHandle = hitTestImageHandle(
+                            point,
+                            selectedShape
+                        );
+
+                        if (imageHandle === "nw" || imageHandle === "se") {
+                            canvas.style.cursor = "nwse-resize";
+                        }
+
+                        if (imageHandle === "ne" || imageHandle === "sw") {
+                            canvas.style.cursor = "nesw-resize";
+                        }
                     }
                 }
             }
@@ -1055,6 +1131,83 @@ function main(): void {
             } else {
                 shape.end = localPoint;
             }
+
+            render();
+            return;
+        }
+
+        if (interaction.type === "resizing-image") {
+            const shape = findShapeById(
+                editorState.scene,
+                interaction.shapeId
+            );
+
+            if (!shape || shape.type !== "image") {
+                return;
+            }
+
+            const localPoint = applyInverseTransform(
+                point,
+                shape.transform
+            );
+
+            const fixed = interaction.fixedCorner;
+            const ratio = interaction.aspectRatio;
+
+            const rawWidth = Math.abs(
+                localPoint.x - fixed.x
+            );
+
+            const rawHeight = Math.abs(
+                localPoint.y - fixed.y
+            );
+
+            const minSize = 20;
+
+            let width: number;
+            let height: number;
+
+            /* whichever mouse dimension has moved further
+            relative to the image's aspect ratio controls the resize */
+            if (rawHeight === 0 || rawWidth / rawHeight > ratio) {
+                width = Math.max(minSize, rawWidth);
+                height = width / ratio;
+            } else {
+                height = Math.max(
+                    minSize / ratio,
+                    rawHeight
+                );
+
+                width = height * ratio;
+
+                if (width < minSize) {
+                    width = minSize;
+                    height = width / ratio;
+                }
+            }
+
+            let movingX: number;
+            let movingY: number;
+
+            if (interaction.handle === "nw" || interaction.handle === "sw") {
+                movingX = fixed.x - width;
+            } else {
+                movingX = fixed.x + width;
+            }
+
+            if (interaction.handle === "nw" || interaction.handle === "ne") {
+                movingY = fixed.y - height;
+            } else {
+                movingY = fixed.y + height;
+            }
+
+            shape.origin = {
+                x: Math.min(fixed.x, movingX),
+                y: Math.min(fixed.y, movingY),
+            };
+
+            shape.width = width;
+            shape.height = height;
 
             render();
             return;

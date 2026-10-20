@@ -1,4 +1,5 @@
 import type { Vec2 } from "../math/vec2";
+import type { ImageHandle } from "../geometry/imageHandles";
 
 // interaction mode = which mode is the editor currently in?
 
@@ -62,4 +63,14 @@ export type InteractionMode =
     type: "marquee-selecting";
     startPoint: Vec2;
     currentPoint: Vec2;
+}
+| {
+    type: "resizing-image";
+    shapeId: string;
+    handle: ImageHandle;
+    startOrigin: Vec2;
+    startWidth: number;
+    startHeight: number;
+    fixedCorner: Vec2;
+    aspectRatio: number;
 }

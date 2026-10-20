@@ -20,6 +20,7 @@ export * from "./geometry/ellipseHandles";
 export * from "./geometry/groupBounds";
 export * from "./geometry/hitTest";
 export * from "./geometry/imageHitTest";
+export * from "./geometry/imageHandles";
 export * from "./geometry/lineHandles";
 export * from "./geometry/moveShape";
 export * from "./geometry/rectHandles";
