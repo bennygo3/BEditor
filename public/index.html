@@ -30,7 +30,7 @@
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                outline: 5px double rgb(16, 16, 16);
+                /* outline: 1px solid rgb(16, 16, 16); */
                 margin: 10px auto;
                 height: 45px;
                 width: 500px;
@@ -46,17 +46,59 @@
                 
             }
 
+            #layers-panel {
+                width: 200px;
+                border: 1px solid rgb(204, 204, 204);
+                border-radius: 6px;
+                padding: 6px;
+            }
+
+            #layers-panel summary {
+                cursor: pointer;
+                font-weight: 600;
+                user-select: none;
+            }
+
+            #layers-list {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                margin-top: 8px;
+            }
+
+            .layer-row {
+                width: 100%;
+                padding: 8px 10px;
+                border: 1px solid rgb(204, 204, 204);
+                background: white;
+                text-align: left;
+                cursor: grab;
+            }
+
+            .layer-row.selected {
+                border-color: rgb(22, 163, 74);
+                background: rgb(220, 252, 231);
+            }
+
+            .layer-row.drag-above {
+                border-top: 3px solid rgb(37, 99, 235);
+            }
+
+            .layer-row.drag-below {
+                border-bottom: 3px solid rgb(37, 99, 235);
+            }
+
             canvas {
                 background: white;
-                border: 1px solid #d0d0d0;
+                border: 1px solid rgb(208, 208, 208);
                 box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
             }
 
             button {
                 margin-right: 8px;
                 padding: 6px 10px;
-                border: 1px solid #444;
-                background: #fff;
+                border: 1px solid rgb(68, 68, 68);
+                background: rgb(255, 255, 255);
                 cursor: pointer;
             }
         </style>
@@ -70,8 +112,13 @@
                 <button id="rect-tool">Rect Tool</button>
                 <button id="ellipse-tool">Ellipse Tool</button>
                 <button id="line-tool">Line Tool</button>
+                <button id="bring-front">Bring to Front</button>
+                <button id="bring-forward">Bring Forward</button>
+                <button id="send-backward">Send Backward</button>
+                <button id="send-back">Send to Back</button>
                 <button id="save-scene">Save Scene</button>
                 <button id="load-scene">Load Scene</button>
+
                 <select id="export-format">
                     <option value="svg">SVG</option>
                     <option value="png">PNG</option>
@@ -80,6 +127,11 @@
                 </select>
                 <button id="export-button">Export</button>
             </div>
+            <details id="layers-panel">
+                <summary>Layers</summary>
+
+                <div id="layers-list"></div>
+            </details>
             <div class="toolbar">
                 <label>
                     Fill:

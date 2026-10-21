@@ -3,6 +3,7 @@ export * from "./commands/command";
 export * from "./commands/deleteShapeCommand";
 export * from "./commands/history";
 export * from "./commands/moveShapeCommand";
+export * from "./commands/reorderLayerCommand";
 export * from "./commands/resizeEllipseCommand";
 export * from "./commands/resizeImageCommand";
 export * from "./commands/resizeLineCommand";

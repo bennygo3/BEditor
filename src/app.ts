@@ -11,6 +11,7 @@ import {
     hitTestRectHandle,
     hitTestLineHandle,
     hitTestImageHandle,
+    ReorderLayerCommand,
     ResizeImageCommand,
     ResizeLineCommand,
     ResizeRectCommand,
@@ -307,11 +308,15 @@ function main(): void {
     const rectToolButton = document.getElementById("rect-tool") as HTMLButtonElement | null;
     const ellipseToolButton = document.getElementById("ellipse-tool") as HTMLButtonElement | null;
     const lineToolButton = document.getElementById("line-tool") as HTMLButtonElement | null;
+    const bringFrontButton = document.getElementById("bring-front") as HTMLButtonElement | null;
+    const bringForwardButton = document.getElementById("bring-forward") as HTMLButtonElement | null;
+    const sendBackwardButton = document.getElementById("send-backward") as HTMLButtonElement | null;
+    const sendBackButton = document.getElementById("send-back") as HTMLButtonElement | null;
     const imageInput = document.getElementById("image-input") as HTMLInputElement | null;
     const exportFormat = document.getElementById("export-format") as HTMLSelectElement | null;
     const exportButton = document.getElementById("export-button") as HTMLButtonElement | null;
 
-    if (!saveButton || !loadButton || !exportButton || !selectToolButton || !multiSelectToolButton || !rectToolButton || !ellipseToolButton || !lineToolButton || !fillColorInput || !strokeColorInput || !strokeWidthInput || !imageInput) {
+    if (!saveButton || !loadButton || !exportButton || !selectToolButton || !multiSelectToolButton || !rectToolButton || !ellipseToolButton || !lineToolButton || !fillColorInput || !strokeColorInput || !strokeWidthInput || !imageInput || !bringForwardButton || !bringFrontButton || !sendBackButton || !sendBackwardButton) {
         console.error("Save/load/export/etc buttons not found");
         return;
     }
@@ -369,6 +374,18 @@ function main(): void {
             strokeWidth.value = String(selected.style.strokeWidth);
             currentStyle.strokeWidth = selected.style.strokeWidth;
         }
+    }
+
+    function getSelectedShapeIndex(): number {
+        if (!editorState.selectedShapeId) {
+            return -1;
+        }
+
+        return editorState.scene.nodes.findIndex(
+            (node) =>
+                node.type === "shape" &&
+                node.shape.id === editorState.selectedShapeId
+        );
     }
 
     saveButton.addEventListener("click", () => {
@@ -532,7 +549,113 @@ function main(): void {
         };
 
         reader.readAsDataURL(file);
-    })
+    });
+
+    bringForwardButton.addEventListener("click", () => {
+        const index = getSelectedShapeIndex();
+
+        if (index === -1 || index >= editorState.scene.nodes.length - 1) {
+            return;
+        }
+
+        const beforeNodes = [...editorState.scene.nodes];
+        const afterNodes = [...editorState.scene.nodes];
+
+        [
+            afterNodes[index],
+            afterNodes[index + 1]
+        ] = [
+            afterNodes[index + 1],
+            afterNodes[index]
+        ];
+
+        history.execute(
+            new ReorderLayerCommand(
+                editorState,
+                beforeNodes,
+                afterNodes
+            )
+        );
+
+        render();
+    });
+
+    sendBackwardButton.addEventListener("click", () => {
+        const index = getSelectedShapeIndex();
+
+        if (index <= 0) {
+            return;
+        }
+
+        const beforeNodes = [...editorState.scene.nodes];
+        const afterNodes = [...editorState.scene.nodes];
+
+        [
+            afterNodes[index],
+            afterNodes[index - 1]
+        ] = [
+            afterNodes[index - 1],
+            afterNodes[index]
+        ];
+
+        history.execute(
+            new ReorderLayerCommand(
+                editorState,
+                beforeNodes,
+                afterNodes
+            )
+        );
+
+        render();
+    });
+
+    bringFrontButton.addEventListener("click", () => {
+        const index = getSelectedShapeIndex();
+
+        if (index === -1 || index === editorState.scene.nodes.length - 1) {
+            return;
+        }
+
+        const beforeNodes = [...editorState.scene.nodes];
+        const afterNodes = [...editorState.scene.nodes];
+
+        const [node] = afterNodes.splice(index, 1);
+
+        afterNodes.push(node); // pushes node to the very end (visually on top)
+
+        history.execute(
+            new ReorderLayerCommand(
+                editorState,
+                beforeNodes,
+                afterNodes
+            )
+        );
+
+        render();
+    });
+
+    sendBackButton.addEventListener("click", () => {
+        const index = getSelectedShapeIndex();
+
+        if (index <= 0) return;
+
+        const beforeNodes = [...editorState.scene.nodes];
+        const afterNodes = [...editorState.scene.nodes];
+
+        const [node] = afterNodes.splice(index, 1);
+
+        afterNodes.unshift(node); // puts layer at 0 index, the furthest-back item
+
+        history.execute(
+            new ReorderLayerCommand(
+                editorState,
+                beforeNodes,
+                afterNodes
+            )
+        );
+
+        render();
+    });
 
     canvas.addEventListener("dragover", (event) => {
         event.preventDefault();
@@ -826,7 +949,7 @@ function main(): void {
                         startWidth: selectedShape.width,
                         startHeight: selectedShape.height,
                         fixedCorner,
-                        aspectRatio: 
+                        aspectRatio:
                             selectedShape.width /
                             selectedShape.height,
                     };
