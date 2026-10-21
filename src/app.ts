@@ -11,6 +11,7 @@ import {
     hitTestRectHandle,
     hitTestLineHandle,
     hitTestImageHandle,
+    ResizeImageCommand,
     ResizeLineCommand,
     ResizeRectCommand,
     ResizeEllipseCommand,
@@ -1362,6 +1363,34 @@ function main(): void {
 
             interaction = { type: "idle" };
             render();
+            return;
+        }
+
+        if (interaction.type === "resizing-image") {
+            const shape = findShapeById(
+                editorState.scene,
+                interaction.shapeId
+            );
+
+            if (shape && shape.type === "image") {
+                history.execute(
+                    new ResizeImageCommand(
+                        editorState,
+                        interaction.shapeId,
+                        { ...interaction.startOrigin },
+                        interaction.startWidth,
+                        interaction.startHeight,
+                        { ...shape.origin },
+                        shape.width,
+                        shape.height
+                    )
+                );
+            }
+
+            interaction = { type: "idle" };
+
+            render();
+
             return;
         }
 
