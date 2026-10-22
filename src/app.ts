@@ -315,8 +315,9 @@ function main(): void {
     const imageInput = document.getElementById("image-input") as HTMLInputElement | null;
     const exportFormat = document.getElementById("export-format") as HTMLSelectElement | null;
     const exportButton = document.getElementById("export-button") as HTMLButtonElement | null;
+    const layersList = document.getElementById("layers-list") as HTMLDivElement | null;
 
-    if (!saveButton || !loadButton || !exportButton || !selectToolButton || !multiSelectToolButton || !rectToolButton || !ellipseToolButton || !lineToolButton || !fillColorInput || !strokeColorInput || !strokeWidthInput || !imageInput || !bringForwardButton || !bringFrontButton || !sendBackButton || !sendBackwardButton) {
+    if (!saveButton || !loadButton || !exportButton || !selectToolButton || !multiSelectToolButton || !rectToolButton || !ellipseToolButton || !lineToolButton || !fillColorInput || !strokeColorInput || !strokeWidthInput || !imageInput || !bringForwardButton || !bringFrontButton || !sendBackButton || !sendBackwardButton || !layersList) {
         console.error("Save/load/export/etc buttons not found");
         return;
     }
@@ -324,6 +325,7 @@ function main(): void {
     const fillColor = fillColorInput;
     const strokeColor = strokeColorInput;
     const strokeWidth = strokeWidthInput;
+    const layers = layersList;
 
     function applyCurrentStyleToSelection(): void {
         const ids = editorState.selectedShapeIds.length > 0
@@ -386,6 +388,108 @@ function main(): void {
                 node.type === "shape" &&
                 node.shape.id === editorState.selectedShapeId
         );
+    }
+
+    function applyLayerOrder(
+        visualShapeIds: string[]
+    ): void {
+        const beforeNodes = [...editorState.scene.nodes];
+
+        /* Panel order: front -> back
+           
+           Scene order: back -> front
+
+           Reverse the panel order before putting the shapes back into scene.nodes
+        */
+        const sceneOrderIds = [...visualShapeIds].reverse();
+
+        const shapeNodesById = new Map(
+            editorState.scene.nodes
+                .filter((node) => node.type === "shape")
+                .map((node) => [
+                    node.shape.id,
+                    node,
+                ])
+        );
+
+        const reorderedShapeNodes = sceneOrderIds
+            .map((id) => shapeNodesById.get(id))
+            .filter((node) => node !== undefined);
+
+        let shapeIndex = 0;
+
+        const afterNodes = editorState.scene.nodes.map(
+            (node) => {
+                if (node.type !== "shape") {
+                    return node;
+                }
+
+                const replacement = reorderedShapeNodes[shapeIndex];
+
+                shapeIndex++;
+
+                return replacement ?? node;
+            }
+        );
+
+        history.execute(
+            new ReorderLayerCommand(
+                editorState,
+                beforeNodes,
+                afterNodes
+            )
+        );
+
+        render();
+    }
+
+    function renderLayersPanel(): void {
+        layers.replaceChildren();
+
+        const shapeNodes = editorState.scene.nodes
+            .filter((node) => node.type === "shape");
+
+        const visualNodes = [...shapeNodes].reverse();
+
+        for (const node of visualNodes) {
+            const shape = node.shape;
+
+            const row = document.createElement('button');
+
+            row.type = "button";
+            row.className = "layer-row";
+            row.draggable = true;
+            row.dataset.layerId = shape.id;
+
+            if (editorState.selectedShapeIds.includes(shape.id) || editorState.selectedShapeId === shape.id) {
+                row.classList.add("selected");
+            }
+
+            if (shape.type === "rect") {
+                row.textContent = "Rectangle";
+            } else if (shape.type === "ellipse") {
+                row.textContent = "Ellipse";
+            } else if (shape.type === "line") {
+                row.textContent = "Line";
+            } else if (shape.type === "image") {
+                row.textContent = "Image";
+            }
+
+            layers.appendChild(row);
+        }
+    }
+
+    function focusLayerRow(shapeId: string): void {
+        const rows = layers.querySelectorAll<HTMLElement>(
+            ".layer-row"
+        );
+
+        for (const row of rows) {
+            if (row.dataset.layerId === shapeId) {
+                row.focus();
+                return;
+            }
+        }
     }
 
     saveButton.addEventListener("click", () => {
@@ -565,9 +669,9 @@ function main(): void {
             afterNodes[index],
             afterNodes[index + 1]
         ] = [
-            afterNodes[index + 1],
-            afterNodes[index]
-        ];
+                afterNodes[index + 1],
+                afterNodes[index]
+            ];
 
         history.execute(
             new ReorderLayerCommand(
@@ -594,9 +698,9 @@ function main(): void {
             afterNodes[index],
             afterNodes[index - 1]
         ] = [
-            afterNodes[index - 1],
-            afterNodes[index]
-        ];
+                afterNodes[index - 1],
+                afterNodes[index]
+            ];
 
         history.execute(
             new ReorderLayerCommand(
@@ -761,6 +865,8 @@ function main(): void {
 
             renderer.renderMarquee(marqueeBounds);
         }
+
+        renderLayersPanel(); // every time scene changes, the layer panel says sync-ed
     }
 
     function renderSceneOnly(): void {
@@ -1739,6 +1845,222 @@ function main(): void {
             history.redo();
             render();
         }
+    });
+
+    layers.addEventListener("click", (event) => {
+        const target = event.target;
+
+        if (!(target instanceof HTMLElement)) {
+            return;
+        }
+
+        const row = target.closest(".layer-row");
+
+        if (!(row instanceof HTMLElement)) {
+            return;
+        }
+
+        const shapeId = row.dataset.layerId;
+
+        if (!shapeId) {
+            return;
+        }
+
+        editorState.selectedShapeId = shapeId;
+        editorState.selectedShapeIds = [shapeId];
+
+        interaction = { type: "idle" };
+
+        syncPaletteToShape(shapeId);
+
+        render();
+
+        focusLayerRow(shapeId);
+    });
+
+    layers.addEventListener("keydown", (event) => {
+        if (event.key !== "ArrowUp" && event.key !== "ArrowDown") {
+            return;
+        }
+
+        const target = event.target;
+
+        if (!(target instanceof HTMLElement)) {
+            return;
+        }
+
+        const shapeId = target.dataset.layerId;
+
+        if (!shapeId) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const visualIds = editorState.scene.nodes
+            .filter((node) => node.type === "shape")
+            .map((node) => node.shape.id)
+            .reverse();
+
+        const index = visualIds.indexOf(shapeId);
+
+        if (index === -1) {
+            return;
+        }
+
+        let newIndex = index;
+
+        if (event.key === "ArrowUp") {
+            newIndex = index - 1;
+        }
+
+        if (event.key === "ArrowDown") {
+            newIndex = index + 1;
+        }
+
+        if (newIndex < 0 || newIndex >= visualIds.length) {
+            return;
+        }
+
+        [
+            visualIds[index],
+            visualIds[newIndex],
+        ] = [
+                visualIds[newIndex],
+                visualIds[index],
+            ];
+
+        applyLayerOrder(visualIds);
+
+        focusLayerRow(shapeId);
+    });
+
+    let draggedLayerId: string | null = null;
+
+    layers.addEventListener("dragstart", (event) => {
+        const target = event.target;
+
+        if (!(target instanceof HTMLElement)) {
+            return;
+        }
+
+        const row = target.closest(".layer-row");
+
+        if (!(row instanceof HTMLElement)) {
+            return;
+        }
+
+        draggedLayerId = row.dataset.layerId ?? null;
+
+        if (event.dataTransfer) {
+            event.dataTransfer.effectAllowed = "move";
+        }
+    });
+
+    layers.addEventListener("dragover", (event) => {
+        event.preventDefault();
+
+        const target = event.target;
+
+        if (!(target instanceof HTMLElement)) {
+            return;
+        }
+
+        const row = target.closest(".layer-row");
+
+        if (!(row instanceof HTMLElement)) {
+            return;
+        }
+
+        layers
+            .querySelectorAll(".layer-row")
+            .forEach((element) => {
+                element.classList.remove(
+                    "drag-above",
+                    "drag-below"
+                );
+            });
+
+        const rect = row.getBoundingClientRect();
+
+        const above = event.clientY < rect.top + rect.height / 2;
+
+        row.classList.add(above ? "drag-above" : "drag-below");
+    });
+
+    layers.addEventListener("drop", (event) => {
+        event.preventDefault();
+
+        if (!draggedLayerId) {
+            return;
+        }
+
+        const target = event.target;
+
+        if (!(target instanceof HTMLElement)) {
+            return;
+        }
+
+        const row = target.closest(".layer-row");
+
+        if (!(row instanceof HTMLElement)) {
+            return;
+        }
+
+        const targetId = row.dataset.layerId;
+
+        if (!targetId || targetId === draggedLayerId) {
+            return;
+        }
+
+        const visualIds = editorState.scene.nodes 
+            .filter((node) => node.type === "shape")
+            .map((node) => node.shape.id)
+            .reverse();
+
+        const draggedIndex = visualIds.indexOf(targetId);
+        const targetIndex = visualIds.indexOf(targetId);
+
+        if (draggedIndex === -1 || targetIndex === -1) {
+            return;
+        }
+
+        const targetRect = row.getBoundingClientRect();
+
+        const dropAbove = event.clientY < targetRect.top + targetRect.height / 2;
+
+        const [movedId] = visualIds.splice(draggedIndex, 1);
+
+        let insertionIndex = visualIds.indexOf(targetId);
+
+        if (!dropAbove) {
+            insertionIndex++
+        }
+
+        visualIds.splice(insertionIndex, 0, movedId);
+
+        applyLayerOrder(visualIds);
+
+        editorState.selectedShapeId = draggedLayerId;
+
+        editorState.selectedShapeIds = [draggedLayerId,];
+
+        focusLayerRow(draggedLayerId);
+
+        draggedLayerId = null;
+    });
+
+    layers.addEventListener("dragend", () => {
+        draggedLayerId = null;
+
+        layers
+            .querySelectorAll(".layer-row")
+            .forEach((element) => {
+                element.classList.remove(
+                    "drag-above",
+                    "drag-below"
+                );
+            });
     });
 
     render();
