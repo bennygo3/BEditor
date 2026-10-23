@@ -23,14 +23,7 @@ export function setupHighDpiCanvas(
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
 
-    ctx.setTransform(
-        dpr,
-        0,
-        0,
-        dpr,
-        0,
-        0
-    );
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     return {
         width,

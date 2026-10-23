@@ -231,8 +231,8 @@ function main(): void {
             const image = new Image();
 
             image.onload = () => {
-                const maxWidth = canvas.width * 0.8;
-                const maxHeight = canvas.height * 0.8;
+                const maxWidth = canvasWidth * 0.8;
+                const maxHeight = canvasHeight * 0.8;
 
                 const scale = Math.min(
                     1,
@@ -252,8 +252,8 @@ function main(): void {
                     );
                 } else {
                     transform.position = vec2(
-                        (canvas.width - width) / 2,
-                        (canvas.height - height) / 2
+                        (canvasWidth - width) / 2,
+                        (canvasHeight - height) / 2
                     );
                 }
 
@@ -521,8 +521,8 @@ function main(): void {
         if (format === "svg") {
             exportSceneToSvg(
                 editorState.scene,
-                canvas.width,
-                canvas.height
+                canvasWidth,
+                canvasHeight
             );
 
             return;
@@ -609,8 +609,8 @@ function main(): void {
             const image = new Image();
 
             image.onload = () => {
-                const maxWidth = canvas.width * 0.8;
-                const maxHeight = canvas.height * 0.8;
+                const maxWidth = canvasWidth * 0.8;
+                const maxHeight = canvasHeight * 0.8;
 
                 const scale = Math.min(
                     1,
@@ -624,8 +624,8 @@ function main(): void {
                 const transform = identityTransform();
 
                 transform.position = vec2(
-                    (canvas.width - width) / 2,
-                    (canvas.height - height) / 2
+                    (canvasWidth - width) / 2,
+                    (canvasHeight - height) / 2
                 );
 
                 const imageShape: ImageShape = {
