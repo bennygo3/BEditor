@@ -119,39 +119,75 @@ export class CanvasRenderer {
     }
 
     private renderEllipse(shape: EllipseShape): void {
-        const steps = 48;   // ellipse is technically drawn as a many-sided polygon. With 48 steps it looks smooth enough
-        const points: Vec2[] = [];
+        const centerWorld = applyTransform(
+            shape.center,
+            shape.transform
+        );
 
-        for (let i = 0; i < steps; i++) {
-            const t = (i / steps) * Math.PI * 2;
-            const localPoint = {
-                x: shape.center.x + Math.cos(t) * shape.radiusX,
-                y: shape.center.y + Math.sin(t) * shape.radiusY,
+        const radiusX = shape.radiusX * Math.abs(shape.transform.scale.x);
+        const radiusY = shape.radiusY * Math.abs(shape.transform.scale.y);
 
-                // cos and sin logic above approximates an ellipse by sampling points aoround a circle/ellipse
-            };
-
-            points.push(applyTransform(localPoint, shape.transform));
-        }
-
+        this.ctx.save();
         this.ctx.beginPath();
-        this.ctx.moveTo(points[0].x, points[0].y);
-
-        for (let i = 1; i < points.length; i++) {
-            this.ctx.lineTo(points[i].x, points[i].y);
-        }
-
-        this.ctx.closePath();
+        this.ctx.ellipse(
+            centerWorld.x,
+            centerWorld.y,
+            radiusX,
+            radiusY,
+            shape.transform.rotation,
+            0,
+            Math.PI * 2
+        );
 
         if (shape.style.fill) {
             this.ctx.fillStyle = shape.style.fill;
             this.ctx.fill();
         }
 
-        this.ctx.strokeStyle = shape.style.stroke ?? "#222";
-        this.ctx.lineWidth = shape.style.strokeWidth ?? 1;
-        this.ctx.stroke();
+        if (shape.style.stroke && shape.style.strokeWidth !== undefined) {
+            this.ctx.strokeStyle = shape.style.stroke;
+            this.ctx.lineWidth = shape.style.strokeWidth;
+            this.ctx.stroke();
+        }
+
+        this.ctx.restore();
+
     }
+
+    // private renderEllipse(shape: EllipseShape): void {
+    //     const steps = 48;   // ellipse is technically drawn as a many-sided polygon. With 48 steps it looks smooth enough
+    //     const points: Vec2[] = [];
+
+    //     for (let i = 0; i < steps; i++) {
+    //         const t = (i / steps) * Math.PI * 2;
+    //         const localPoint = {
+    //             x: shape.center.x + Math.cos(t) * shape.radiusX,
+    //             y: shape.center.y + Math.sin(t) * shape.radiusY,
+
+    //             // cos and sin logic above approximates an ellipse by sampling points aoround a circle/ellipse
+    //         };
+
+    //         points.push(applyTransform(localPoint, shape.transform));
+    //     }
+
+    //     this.ctx.beginPath();
+    //     this.ctx.moveTo(points[0].x, points[0].y);
+
+    //     for (let i = 1; i < points.length; i++) {
+    //         this.ctx.lineTo(points[i].x, points[i].y);
+    //     }
+
+    //     this.ctx.closePath();
+
+    //     if (shape.style.fill) {
+    //         this.ctx.fillStyle = shape.style.fill;
+    //         this.ctx.fill();
+    //     }
+
+    //     this.ctx.strokeStyle = shape.style.stroke ?? "#222";
+    //     this.ctx.lineWidth = shape.style.strokeWidth ?? 1;
+    //     this.ctx.stroke();
+    // }
 
     private renderLine(shape: LineShape): void {
         const start = applyTransform(shape.start, shape.transform);

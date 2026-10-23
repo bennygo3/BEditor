@@ -40,8 +40,11 @@ import {
     getShapeBoundsWorld,
     getGroupBoundsWorld,
     boundsIntersect,
+    CanvasRenderer,
+    getCanvasPointFromClient,
+    setupHighDpiCanvas,
 } from "./engine";
-import { CanvasRenderer } from "./renderer/canvasRenderer";
+
 
 function buildDemoScene() {
     const scene = createScene();
@@ -193,22 +196,19 @@ function main(): void {
         throw new Error("2D canvas context could not be created");
     }
 
+    // retina / high-dpi canvas:
+    const {
+        width: canvasWidth,
+        height: canvasHeight,
+    } = setupHighDpiCanvas(
+        canvas,
+        ctx
+    );
+
     const scene = buildDemoScene();
     const editorState = createEditorState(scene);
     const history = new CommandHistory();
     const renderer = new CanvasRenderer(ctx, () => render()); // callback is important because image loading is asynchronous
-
-    function getCanvasPointFromClient(
-        clientX: number,
-        clientY: number
-    ): Vec2 {
-        const rect = canvas.getBoundingClientRect();
-
-        return vec2(
-            (clientX - rect.left) * (canvas.width / rect.width),
-            (clientY - rect.top) * (canvas.height / rect.height)
-        );
-    }
 
     function importImageFile(file: File, dropPoint?: Vec2): void {
         const allowedTypes = [
@@ -484,7 +484,7 @@ function main(): void {
             ".layer-row"
         );
 
-        for (const row of rows) {
+        for (const row of Array.from(rows)) {
             if (row.dataset.layerId === shapeId) {
                 row.focus();
                 return;
@@ -781,6 +781,7 @@ function main(): void {
         const file = files[0];
 
         const dropPoint = getCanvasPointFromClient(
+            canvas,
             event.clientX,
             event.clientY
         );
