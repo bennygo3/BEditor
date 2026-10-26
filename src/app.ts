@@ -349,6 +349,19 @@ function main(): void {
     const noFill = noFillInput;
     const noStroke = noStrokeInput;
 
+    function syncActiveToolButtons(): void {
+        selectToolButton?.classList.toggle("active-tool", activeTool === "select");
+
+        multiSelectToolButton?.classList.toggle("active-tool", activeTool === "multi-select");
+
+        rectToolButton?.classList.toggle("active-tool", activeTool === "rect");
+
+        ellipseToolButton?.classList.toggle("active-tool", activeTool === "ellipse");
+
+        lineToolButton?.classList.toggle("active-tool", activeTool === "line");
+
+    }
+
     function applyCurrentStyleToSelection(): void {
         const ids = editorState.selectedShapeIds.length > 0
             ? editorState.selectedShapeIds
@@ -587,26 +600,41 @@ function main(): void {
 
     selectToolButton.addEventListener("click", () => {
         activeTool = "select";
+
+        syncActiveToolButtons();
+        
         console.log("Active tool: select");
     });
 
     multiSelectToolButton.addEventListener("click", () => {
         activeTool = "multi-select";
+        
+        syncActiveToolButtons();
+
         console.log("Active tool: multi-select");
     });
 
     rectToolButton.addEventListener("click", () => {
         activeTool = "rect";
+
+        syncActiveToolButtons();
+
         console.log("Active tool: rect");
     });
 
     ellipseToolButton.addEventListener("click", () => {
         activeTool = "ellipse";
+
+        syncActiveToolButtons();
+
         console.log("Active tool: ellipse");
     });
 
     lineToolButton.addEventListener("click", () => {
         activeTool = "line";
+
+        syncActiveToolButtons();
+
         console.log("Active tool: line")
     });
 
@@ -946,6 +974,8 @@ function main(): void {
     function renderSceneOnly(): void {
         renderer.renderScene(editorState.scene);
     }
+
+    syncActiveToolButtons();
 
     canvas.addEventListener("mousedown", (event) => {
         const rect = canvas.getBoundingClientRect();
@@ -1617,11 +1647,6 @@ function main(): void {
                         stroke: currentStyle.stroke,
                         strokeWidth: currentStyle.strokeWidth,
                     },
-                    // style: {
-                    //     fill: "#4f46e5",
-                    //     stroke: "#111111",
-                    //     strokeWidth: 2,
-                    // },
                 };
 
                 // remove preview node
@@ -1639,7 +1664,6 @@ function main(): void {
             }
 
             interaction = { type: "idle" };
-            activeTool = "select";
             render();
             return;
         }
@@ -1709,11 +1733,6 @@ function main(): void {
                         stroke: currentStyle.stroke,
                         strokeWidth: currentStyle.strokeWidth,
                     },
-                    // style: {
-                    //     fill: "#e63946",
-                    //     stroke: "#333333",
-                    //     strokeWidth: 2,
-                    // },
                 };
 
                 editorState.scene.nodes = editorState.scene.nodes.filter((node) => {
@@ -1729,7 +1748,6 @@ function main(): void {
             }
 
             interaction = { type: "idle" };
-            activeTool = "select";
             render();
             return;
         }
@@ -1790,7 +1808,6 @@ function main(): void {
             }
 
             interaction = { type: "idle" };
-            activeTool = "select";
             render();
             return;
         }
