@@ -89,7 +89,7 @@ export class CanvasRenderer {
             this.ctx.fill();
         }
 
-        this.ctx.strokeStyle = shape.style.stroke ?? "#222";
+        this.ctx.strokeStyle = shape.style.stroke ?? "rgb(34, 34, 34)";
         this.ctx.lineWidth = shape.style.strokeWidth ?? 1;
         this.ctx.stroke();
 

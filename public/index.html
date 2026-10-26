@@ -1,165 +1,173 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <title>Logo Editor</title>
-        <style>
-            body {
-                margin: 0;
-                background: #f4f4f4;
-                font-family: Arial, sans-serif;
-            }
 
-            .app-shell {
-                display: flex;
-                flex-direction: column;
-                height: 100vh;
-            }
+<head>
+    <meta charset="UTF-8" />
+    <title>Logo Editor</title>
+    <style>
+        body {
+            margin: 0;
+            background: #f4f4f4;
+            font-family: Arial, sans-serif;
+        }
 
-            .topbar {
-                display: flex;
-                justify-content: center;
-                padding: 12px;
-                background: #111;
-                color: white;
-                font-size: 14px;
-                margin-bottom: 15px;
-            }
+        .app-shell {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
 
-            .toolbar {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                /* outline: 1px solid rgb(16, 16, 16); */
-                margin: 10px auto;
-                height: 45px;
-                width: 500px;
-                gap: 15px;
+        .topbar {
+            display: flex;
+            justify-content: center;
+            padding: 12px;
+            background: rgb(139, 137, 137);
+            color: white;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
 
-            }
+        .toolbar {
+            display: flex;
+            justify-content: center;
+            align-items: baseline;
+            /* outline: 1px solid rgb(16, 16, 16); */
+            margin: auto auto;
+            height: 45px;
+            width: 98%;
+            gap: 10px;
 
-            .workspace {
-                flex: 1;
-                display: flex;
-                justify-content: space-evenly;
-                align-items: center;
-                
-            }
+        }
 
-            #layers-panel {
-                width: 200px;
-                border: 1px solid rgb(204, 204, 204);
-                border-radius: 6px;
-                padding: 6px;
-            }
+        .workspace {
+            flex: 1;
+            display: flex;
+            justify-content: space-evenly;
+            align-items: center;
 
-            #layers-panel summary {
-                cursor: pointer;
-                font-weight: 600;
-                user-select: none;
-            }
+        }
 
-            #layers-list {
-                display: flex;
-                flex-direction: column;
-                gap: 4px;
-                margin-top: 8px;
-            }
+        #layers-panel {
+            width: 200px;
+            border: 1px solid rgb(204, 204, 204);
+            border-radius: 6px;
+            padding: 6px;
+        }
 
-            .layer-row {
-                width: 100%;
-                padding: 8px 10px;
-                border: 1px solid rgb(204, 204, 204);
-                background: white;
-                text-align: left;
-                cursor: grab;
-            }
+        #layers-panel summary {
+            cursor: pointer;
+            font-weight: 600;
+            user-select: none;
+        }
 
-            .layer-row.selected {
-                border-color: rgb(22, 163, 74);
-                background: rgb(220, 252, 231);
-            }
+        #layers-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 8px;
+        }
 
-            .layer-row.drag-above {
-                border-top: 3px solid rgb(37, 99, 235);
-            }
+        .layer-row {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid rgb(204, 204, 204);
+            background: white;
+            text-align: left;
+            cursor: grab;
+        }
 
-            .layer-row.drag-below {
-                border-bottom: 3px solid rgb(37, 99, 235);
-            }
+        .layer-row.selected {
+            border-color: rgb(22, 163, 74);
+            background: rgb(220, 252, 231);
+        }
 
-            canvas {
-                background: white;
-                border: 1px solid rgb(208, 208, 208);
-                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-            }
+        .layer-row.drag-above {
+            border-top: 3px solid rgb(37, 99, 235);
+        }
 
-            button {
-                margin-right: 8px;
-                padding: 6px 10px;
-                border: 1px solid rgb(68, 68, 68);
-                background: rgb(255, 255, 255);
-                cursor: pointer;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="app-shell">
-            <header style="margin: 0 auto;">°°°Logo Editor Engine°°°</header>
-            <div class="topbar">
-                <button id="tool-select">Select Tool</button>
-                <button id="multi-select">Multi Select</button>
-                <button id="rect-tool">Rect Tool</button>
-                <button id="ellipse-tool">Ellipse Tool</button>
-                <button id="line-tool">Line Tool</button>
-                <button id="bring-front">Bring to Front</button>
-                <button id="bring-forward">Bring Forward</button>
-                <button id="send-backward">Send Backward</button>
-                <button id="send-back">Send to Back</button>
-                <button id="save-scene">Save Scene</button>
-                <button id="load-scene">Load Scene</button>
+        .layer-row.drag-below {
+            border-bottom: 3px solid rgb(37, 99, 235);
+        }
 
-                <select id="export-format">
-                    <option value="svg">SVG</option>
-                    <option value="png">PNG</option>
-                    <option value="jpeg">JPEG</option>
-                    <option value="webp">WebP</option>
-                </select>
-                <button id="export-button">Export</button>
-            </div>
-            <details id="layers-panel">
-                <summary>Layers</summary>
+        canvas {
+            background: white;
+            border: 1px solid rgb(208, 208, 208);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        }
 
-                <div id="layers-list"></div>
-            </details>
-            <div class="toolbar">
-                <label>
-                    Fill:
-                    <input id="fill-color" type="color" value="#4f46e5" />
-                </label>
-                <label>
-                    Stroke:
-                    <input id="stroke-color" type="color" value="#111111" />
-                </label>
-                <label>
-                    Stroke Width:
-                    <input id="stroke-width" type="number" value="2" min="0" max="20" />
-                </label>
-                <label>
-                    Import Image:
-                    <input id="image-input" type="file" accept="image/png,image/jpeg,image/webp" />
-                </label>
-            </div>
-            <div class="workspace">
-                <canvas id="editor-canvas" width="900" height="700"></canvas>
-            </div>       
+        button {
+            margin-right: 8px;
+            padding: 6px 10px;
+            border: 1px solid rgb(68, 68, 68);
+            background: rgb(255, 255, 255);
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-shell">
+
+        <div class="topbar">
+            <button id="tool-select">Select Tool</button>
+            <button id="multi-select">Multi Select</button>
+            <button id="rect-tool">Rect Tool</button>
+            <button id="ellipse-tool">Ellipse Tool</button>
+            <button id="line-tool">Line Tool</button>
+            <button id="bring-front">Bring to Front</button>
+            <button id="bring-forward">Bring Forward</button>
+            <button id="send-backward">Send Backward</button>
+            <button id="send-back">Send to Back</button>
+            <button id="save-scene">Save Scene</button>
+            <button id="load-scene">Load Scene</button>
+
+            <select id="export-format">
+                <option value="svg">SVG</option>
+                <option value="png">PNG</option>
+                <option value="jpeg">JPEG</option>
+                <option value="webp">WebP</option>
+            </select>
+            <button id="export-button">Export</button>
         </div>
 
-        <script>require("../dist/app.js")</script>
-         <!-- <script>
-            const appPath = require.resolve("../dist/app.js");
-            delete require.cache[appPath];
-            require(appPath);
-         </script> -->
-    </body>
+        <div class="toolbar">
+            <label>
+                Fill:
+                <input id="fill-color" type="color" value="rgb(70, 144, 229)" />
+            </label>
+            <label>
+                No Fill:
+                <input id="no-fill" type="checkbox">
+            </label>
+            <label>
+                Stroke:
+                <input id="stroke-color" type="color" value="rgb(0, 0, 0)" />
+            </label>
+            <label>
+                Stroke Width:
+                <input id="stroke-width" type="number" value="2" min="0" max="20" />
+            </label>
+            <label>
+                No Stroke:
+                <input id="no-stroke" type="checkbox">
+            </label>
+            <label>
+                Import Image:
+                <input id="image-input" type="file" accept="image/png,image/jpeg,image/webp" />
+            </label>
+        </div>
+        <details id="layers-panel">
+            <summary>Layers</summary>
+
+            <div id="layers-list"></div>
+        </details>
+        <div class="workspace">
+            <canvas id="editor-canvas" width="900" height="700"></canvas>
+        </div>
+    </div>
+
+    <script>require("../dist/app.js")</script>
+
+</body>
+
 </html>

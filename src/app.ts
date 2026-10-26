@@ -47,6 +47,7 @@ import {
 
 
 function buildDemoScene() {
+    // return createScene(); // -> use this for a blank canvas
     const scene = createScene();
 
     const rectTransform = identityTransform();
@@ -65,7 +66,7 @@ function buildDemoScene() {
         height: 120,
         transform: rectTransform,
         style: {
-            fill: "#4f46e5",
+            fill: "rgb(70, 144, 229)",
             stroke: "#111111",
             strokeWidth: 2,
         },
@@ -79,8 +80,8 @@ function buildDemoScene() {
         radiusY: 55,
         transform: ellipseTransform,
         style: {
-            fill: "#e63946",
-            stroke: "#333333",
+            fill: "rgb(0, 125, 27)",
+            stroke: "rgb(0, 0, 0)",
             strokeWidth: 2,
         },
     };
@@ -196,7 +197,7 @@ function main(): void {
         throw new Error("2D canvas context could not be created");
     }
 
-    // retina / high-dpi canvas:
+    // retina / high-dpi (sharper stroke) canvas:
     const {
         width: canvasWidth,
         height: canvasHeight,
@@ -292,9 +293,15 @@ function main(): void {
 
     let activeTool: Tool = "select";
 
-    let currentStyle = {
-        fill: "#4f46e5",
-        stroke: "#111111",
+    /* a colon (after currentStyle) denotes the TYPE. semi colons are used to separate properties; 
+       = assigns the properties of the OBJECT currentStyle. commas are used to separate */
+    let currentStyle: {
+        fill: string | undefined;
+        stroke: string | undefined;
+        strokeWidth: number;
+    } = {
+        fill: "rgb(70, 144, 229)",
+        stroke: "rgb(0, 0, 0)",
         strokeWidth: 2,
     };
 
@@ -316,8 +323,21 @@ function main(): void {
     const exportFormat = document.getElementById("export-format") as HTMLSelectElement | null;
     const exportButton = document.getElementById("export-button") as HTMLButtonElement | null;
     const layersList = document.getElementById("layers-list") as HTMLDivElement | null;
+    const noFillInput = document.getElementById("no-fill") as HTMLInputElement | null;
+    const noStrokeInput = document.getElementById("no-stroke") as HTMLInputElement | null;
 
-    if (!saveButton || !loadButton || !exportButton || !selectToolButton || !multiSelectToolButton || !rectToolButton || !ellipseToolButton || !lineToolButton || !fillColorInput || !strokeColorInput || !strokeWidthInput || !imageInput || !bringForwardButton || !bringFrontButton || !sendBackButton || !sendBackwardButton || !layersList) {
+    if (
+        !saveButton || !loadButton ||
+        !exportButton || !selectToolButton ||
+        !multiSelectToolButton || !rectToolButton ||
+        !ellipseToolButton || !lineToolButton ||
+        !fillColorInput || !strokeColorInput ||
+        !strokeWidthInput || !imageInput ||
+        !bringForwardButton || !bringFrontButton ||
+        !sendBackButton || !sendBackwardButton ||
+        !layersList || !noFillInput ||
+        !noStrokeInput
+    ) {
         console.error("Save/load/export/etc buttons not found");
         return;
     }
@@ -326,6 +346,8 @@ function main(): void {
     const strokeColor = strokeColorInput;
     const strokeWidth = strokeWidthInput;
     const layers = layersList;
+    const noFill = noFillInput;
+    const noStroke = noStrokeInput;
 
     function applyCurrentStyleToSelection(): void {
         const ids = editorState.selectedShapeIds.length > 0
@@ -362,14 +384,33 @@ function main(): void {
             return;
         }
 
-        if (selected.style.fill && selected.type !== "line") {
-            fillColor.value = selected.style.fill;
-            currentStyle.fill = selected.style.fill;
+        if (selected.type !== "line") {
+            if (selected.style.fill) {
+                fillColor.value = selected.style.fill;
+
+                currentStyle.fill = selected.style.fill;
+
+                noFill.checked = false;
+                fillColor.disabled = false;
+            } else {
+                currentStyle.fill = undefined;
+
+                noFill.checked = true;
+                fillColor.disabled = true;
+            }
         }
 
         if (selected.style.stroke) {
             strokeColor.value = selected.style.stroke;
             currentStyle.stroke = selected.style.stroke;
+
+            noStroke.checked = false;
+            strokeColor.disabled = false;
+        } else {
+            currentStyle.stroke = undefined;
+
+            noStroke.checked = true;
+            strokeColor.disabled = true;
         }
 
         if (selected.style.strokeWidth !== undefined) {
@@ -570,12 +611,44 @@ function main(): void {
     });
 
     fillColorInput.addEventListener("input", () => {
+        noFillInput.checked = false;
+        fillColor.disabled = false;
+
         currentStyle.fill = fillColorInput.value;
+
+        applyCurrentStyleToSelection();
+    });
+
+    noFillInput.addEventListener("change", () => {
+        if (noFillInput.checked) {
+            currentStyle.fill = undefined;
+            fillColor.disabled = true;
+        } else {
+            currentStyle.fill = fillColor.value;
+            fillColor.disabled = false;
+        }
+
         applyCurrentStyleToSelection();
     });
 
     strokeColorInput.addEventListener("input", () => {
+        noStrokeInput.checked = false;
+        strokeColor.disabled = false;
+
         currentStyle.stroke = strokeColorInput.value;
+
+        applyCurrentStyleToSelection();
+    });
+
+    noStrokeInput.addEventListener("change", () => {
+        if (noStrokeInput.checked) {
+            currentStyle.stroke = undefined;
+            strokeColor.disabled = true;
+        } else {
+            currentStyle.stroke = strokeColor.value;
+            strokeColor.disabled = false;
+        }
+
         applyCurrentStyleToSelection();
     });
 
@@ -2014,7 +2087,7 @@ function main(): void {
             return;
         }
 
-        const visualIds = editorState.scene.nodes 
+        const visualIds = editorState.scene.nodes
             .filter((node) => node.type === "shape")
             .map((node) => node.shape.id)
             .reverse();

@@ -1,4 +1,4 @@
-import type { Vec2 } from "../engine";
+import type { Vec2 } from "../engine/math/vec2";
 
 export type CanvasSize = {
     width: number;
