@@ -47,4 +47,12 @@ export type ImageShape = {
     opacity: number;
 }
 
-export type Shape = RectShape | EllipseShape | LineShape | ImageShape;
+export type BrushShape = {
+    type: "brush";
+    id: string;
+    points: Vec2[];
+    transform: Transform;
+    style: Style;
+}
+
+export type Shape = RectShape | EllipseShape | LineShape | ImageShape | BrushShape;

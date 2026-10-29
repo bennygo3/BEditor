@@ -66,7 +66,10 @@ export class CanvasRenderer {
             return;
         }
 
-        // above: shape specific drawing
+        if (shape.type === "brush") {
+            this.renderBrush(shape);
+            return;
+        }
     }
 
     private renderRect(shape: RectShape): void {
@@ -369,6 +372,46 @@ export class CanvasRenderer {
             this.ctx.fill();
             this.ctx.stroke();
         }
+
+        this.ctx.restore();
+    }
+
+    private renderBrush(shape: BrushShape): void {
+        if (shape.points.length < 2) {
+            return;
+        }
+
+        const points = shape.points.map((point) => 
+            applyTransform(
+                point,
+                shape.transform
+            )
+        );
+
+        this.ctx.save();
+
+        this.ctx.beginPath();
+
+        this.ctx.moveTo(
+            points[0].x,
+            points[0].y
+        );
+
+        for (let i = 1; i < points.length; i++) {
+            this.ctx.lineTo(
+                points[i].x,
+                points[i].y
+            );
+        }
+
+        this.ctx.strokeStyle = shape.style.stroke ?? "rgb(0, 0, 0)";
+
+        this.ctx.lineWidth = shape.style.stokeWidth ?? 4;
+
+        this.ctx.lineCap = "round";
+        this.ctx.lineJoin = "round";
+
+        this.ctx.stroke();
 
         this.ctx.restore();
     }
