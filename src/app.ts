@@ -32,6 +32,7 @@ import {
     type Tool,
     type ImageShape,
     type Vec2,
+    type BrushShape,
     getShapesCenterWorld,
     setShapeRotationCenter,
     hitTestRotateHandle,
@@ -305,26 +306,29 @@ function main(): void {
         strokeWidth: 2,
     };
 
-    const fillColorInput = document.getElementById("fill-color") as HTMLInputElement | null;
-    const strokeColorInput = document.getElementById("stroke-color") as HTMLInputElement | null;
-    const strokeWidthInput = document.getElementById("stroke-width") as HTMLInputElement | null;
-    const saveButton = document.getElementById("save-scene") as HTMLButtonElement | null;
-    const loadButton = document.getElementById("load-scene") as HTMLButtonElement | null;
-    const selectToolButton = document.getElementById("tool-select") as HTMLButtonElement | null;
-    const multiSelectToolButton = document.getElementById("multi-select") as HTMLButtonElement | null;
-    const rectToolButton = document.getElementById("rect-tool") as HTMLButtonElement | null;
-    const ellipseToolButton = document.getElementById("ellipse-tool") as HTMLButtonElement | null;
-    const lineToolButton = document.getElementById("line-tool") as HTMLButtonElement | null;
-    const bringFrontButton = document.getElementById("bring-front") as HTMLButtonElement | null;
     const bringForwardButton = document.getElementById("bring-forward") as HTMLButtonElement | null;
-    const sendBackwardButton = document.getElementById("send-backward") as HTMLButtonElement | null;
-    const sendBackButton = document.getElementById("send-back") as HTMLButtonElement | null;
-    const imageInput = document.getElementById("image-input") as HTMLInputElement | null;
-    const exportFormat = document.getElementById("export-format") as HTMLSelectElement | null;
+    const bringFrontButton = document.getElementById("bring-front") as HTMLButtonElement | null;
+    const brushToolButton = document.getElementById("brush-tool") as HTMLButtonElement | null;
+    const ellipseToolButton = document.getElementById("ellipse-tool") as HTMLButtonElement | null;
+    const eraserToolButton = document.getElementById("eraser-tool") as HTMLButtonElement | null;
     const exportButton = document.getElementById("export-button") as HTMLButtonElement | null;
+    const exportFormat = document.getElementById("export-format") as HTMLSelectElement | null;
+    const fillColorInput = document.getElementById("fill-color") as HTMLInputElement | null;
+    const imageInput = document.getElementById("image-input") as HTMLInputElement | null;
     const layersList = document.getElementById("layers-list") as HTMLDivElement | null;
+    const lineToolButton = document.getElementById("line-tool") as HTMLButtonElement | null;
+    const loadButton = document.getElementById("load-scene") as HTMLButtonElement | null;
+    const multiSelectToolButton = document.getElementById("multi-select") as HTMLButtonElement | null;
     const noFillInput = document.getElementById("no-fill") as HTMLInputElement | null;
     const noStrokeInput = document.getElementById("no-stroke") as HTMLInputElement | null;
+    const saveButton = document.getElementById("save-scene") as HTMLButtonElement | null;
+    const selectToolButton = document.getElementById("tool-select") as HTMLButtonElement | null;
+    const sendBackButton = document.getElementById("send-back") as HTMLButtonElement | null;
+    const sendBackwardButton = document.getElementById("send-backward") as HTMLButtonElement | null;
+    const strokeColorInput = document.getElementById("stroke-color") as HTMLInputElement | null;
+    const strokeWidthInput = document.getElementById("stroke-width") as HTMLInputElement | null;
+    const rectToolButton = document.getElementById("rect-tool") as HTMLButtonElement | null;
+
 
     if (
         !saveButton || !loadButton ||
@@ -336,7 +340,8 @@ function main(): void {
         !bringForwardButton || !bringFrontButton ||
         !sendBackButton || !sendBackwardButton ||
         !layersList || !noFillInput ||
-        !noStrokeInput
+        !noStrokeInput || !brushToolButton ||
+        !eraserToolButton
     ) {
         console.error("Save/load/export/etc buttons not found");
         return;
@@ -348,19 +353,6 @@ function main(): void {
     const layers = layersList;
     const noFill = noFillInput;
     const noStroke = noStrokeInput;
-
-    function syncActiveToolButtons(): void {
-        selectToolButton?.classList.toggle("active-tool", activeTool === "select");
-
-        multiSelectToolButton?.classList.toggle("active-tool", activeTool === "multi-select");
-
-        rectToolButton?.classList.toggle("active-tool", activeTool === "rect");
-
-        ellipseToolButton?.classList.toggle("active-tool", activeTool === "ellipse");
-
-        lineToolButton?.classList.toggle("active-tool", activeTool === "line");
-
-    }
 
     function applyCurrentStyleToSelection(): void {
         const ids = editorState.selectedShapeIds.length > 0
@@ -387,61 +379,6 @@ function main(): void {
         }
 
         render();
-    }
-
-    function syncPaletteToShape(shapeId: string): void {
-        const selected = findShapeById(editorState.scene, shapeId);
-        if (!selected) return;
-
-        if (!selected || selected.type === "image") {
-            return;
-        }
-
-        if (selected.type !== "line") {
-            if (selected.style.fill) {
-                fillColor.value = selected.style.fill;
-
-                currentStyle.fill = selected.style.fill;
-
-                noFill.checked = false;
-                fillColor.disabled = false;
-            } else {
-                currentStyle.fill = undefined;
-
-                noFill.checked = true;
-                fillColor.disabled = true;
-            }
-        }
-
-        if (selected.style.stroke) {
-            strokeColor.value = selected.style.stroke;
-            currentStyle.stroke = selected.style.stroke;
-
-            noStroke.checked = false;
-            strokeColor.disabled = false;
-        } else {
-            currentStyle.stroke = undefined;
-
-            noStroke.checked = true;
-            strokeColor.disabled = true;
-        }
-
-        if (selected.style.strokeWidth !== undefined) {
-            strokeWidth.value = String(selected.style.strokeWidth);
-            currentStyle.strokeWidth = selected.style.strokeWidth;
-        }
-    }
-
-    function getSelectedShapeIndex(): number {
-        if (!editorState.selectedShapeId) {
-            return -1;
-        }
-
-        return editorState.scene.nodes.findIndex(
-            (node) =>
-                node.type === "shape" &&
-                node.shape.id === editorState.selectedShapeId
-        );
     }
 
     function applyLayerOrder(
@@ -497,6 +434,31 @@ function main(): void {
         render();
     }
 
+    function focusLayerRow(shapeId: string): void {
+        const rows = layers.querySelectorAll<HTMLElement>(
+            ".layer-row"
+        );
+
+        for (const row of Array.from(rows)) {
+            if (row.dataset.layerId === shapeId) {
+                row.focus();
+                return;
+            }
+        }
+    }
+
+    function getSelectedShapeIndex(): number {
+        if (!editorState.selectedShapeId) {
+            return -1;
+        }
+
+        return editorState.scene.nodes.findIndex(
+            (node) =>
+                node.type === "shape" &&
+                node.shape.id === editorState.selectedShapeId
+        );
+    }
+
     function renderLayersPanel(): void {
         layers.replaceChildren();
 
@@ -533,40 +495,136 @@ function main(): void {
         }
     }
 
-    function focusLayerRow(shapeId: string): void {
-        const rows = layers.querySelectorAll<HTMLElement>(
-            ".layer-row"
-        );
+    function syncActiveToolButtons(): void {
+        selectToolButton?.classList.toggle("active-tool", activeTool === "select");
 
-        for (const row of Array.from(rows)) {
-            if (row.dataset.layerId === shapeId) {
-                row.focus();
-                return;
-            }
-        }
+        multiSelectToolButton?.classList.toggle("active-tool", activeTool === "multi-select");
+
+        rectToolButton?.classList.toggle("active-tool", activeTool === "rect");
+
+        ellipseToolButton?.classList.toggle("active-tool", activeTool === "ellipse");
+
+        lineToolButton?.classList.toggle("active-tool", activeTool === "line");
+
+        brushToolButton?.classList.toggle("active-tool", activeTool === "eraser");
+
+        eraserToolButton?.classList.toggle("activeTool", activeTool === "eraser");
+
     }
 
-    saveButton.addEventListener("click", () => {
-        const json = serializeScene(editorState.scene);
-        localStorage.setItem("logo-editor-scene", json);
-        console.log("Scene saved");
-    });
+    function syncPaletteToShape(shapeId: string): void {
+        const selected = findShapeById(editorState.scene, shapeId);
+        if (!selected) return;
 
-    loadButton.addEventListener("click", () => {
-        const json = localStorage.getItem("logo-editor-scene");
-
-        if (!json) {
-            console.log("No saved scene found");
+        if (!selected || selected.type === "image") {
             return;
         }
 
-        const loadedScene = deserializeScene(json);
-        editorState.scene.nodes = loadedScene.nodes;
-        editorState.selectedShapeId = null;
-        interaction = { type: "idle" };
+        if (selected.type !== "line") {
+            if (selected.style.fill) {
+                fillColor.value = selected.style.fill;
 
-        console.log("Scene loaded");
+                currentStyle.fill = selected.style.fill;
+
+                noFill.checked = false;
+                fillColor.disabled = false;
+            } else {
+                currentStyle.fill = undefined;
+
+                noFill.checked = true;
+                fillColor.disabled = true;
+            }
+        }
+
+        if (selected.style.stroke) {
+            strokeColor.value = selected.style.stroke;
+            currentStyle.stroke = selected.style.stroke;
+
+            noStroke.checked = false;
+            strokeColor.disabled = false;
+        } else {
+            currentStyle.stroke = undefined;
+
+            noStroke.checked = true;
+            strokeColor.disabled = true;
+        }
+
+        if (selected.style.strokeWidth !== undefined) {
+            strokeWidth.value = String(selected.style.strokeWidth);
+            currentStyle.strokeWidth = selected.style.strokeWidth;
+        }
+    }
+
+    bringForwardButton.addEventListener("click", () => {
+        const index = getSelectedShapeIndex();
+
+        if (index === -1 || index >= editorState.scene.nodes.length - 1) {
+            return;
+        }
+
+        const beforeNodes = [...editorState.scene.nodes];
+        const afterNodes = [...editorState.scene.nodes];
+
+        [
+            afterNodes[index],
+            afterNodes[index + 1]
+        ] = [
+                afterNodes[index + 1],
+                afterNodes[index]
+            ];
+
+        history.execute(
+            new ReorderLayerCommand(
+                editorState,
+                beforeNodes,
+                afterNodes
+            )
+        );
+
         render();
+    });
+
+    bringFrontButton.addEventListener("click", () => {
+        const index = getSelectedShapeIndex();
+
+        if (index === -1 || index === editorState.scene.nodes.length - 1) {
+            return;
+        }
+
+        const beforeNodes = [...editorState.scene.nodes];
+        const afterNodes = [...editorState.scene.nodes];
+
+        const [node] = afterNodes.splice(index, 1);
+
+        afterNodes.push(node); // pushes node to the very end (visually on top)
+
+        history.execute(
+            new ReorderLayerCommand(
+                editorState,
+                beforeNodes,
+                afterNodes
+            )
+        );
+
+        render();
+    });
+
+    brushToolButton.addEventListener("click", () => {
+        activeTool = "brush";
+        syncActiveToolButtons();
+    });
+
+    ellipseToolButton.addEventListener("click", () => {
+        activeTool = "ellipse";
+
+        syncActiveToolButtons();
+
+        console.log("Active tool: ellipse");
+    });
+
+    eraserToolButton.addEventListener("click", () => {
+        activeTool = "eraser";
+        syncActiveToolButtons();
     });
 
     exportButton.addEventListener("click", () => {
@@ -598,90 +656,12 @@ function main(): void {
         }
     });
 
-    selectToolButton.addEventListener("click", () => {
-        activeTool = "select";
-
-        syncActiveToolButtons();
-        
-        console.log("Active tool: select");
-    });
-
-    multiSelectToolButton.addEventListener("click", () => {
-        activeTool = "multi-select";
-        
-        syncActiveToolButtons();
-
-        console.log("Active tool: multi-select");
-    });
-
-    rectToolButton.addEventListener("click", () => {
-        activeTool = "rect";
-
-        syncActiveToolButtons();
-
-        console.log("Active tool: rect");
-    });
-
-    ellipseToolButton.addEventListener("click", () => {
-        activeTool = "ellipse";
-
-        syncActiveToolButtons();
-
-        console.log("Active tool: ellipse");
-    });
-
-    lineToolButton.addEventListener("click", () => {
-        activeTool = "line";
-
-        syncActiveToolButtons();
-
-        console.log("Active tool: line")
-    });
-
     fillColorInput.addEventListener("input", () => {
         noFillInput.checked = false;
         fillColor.disabled = false;
 
         currentStyle.fill = fillColorInput.value;
 
-        applyCurrentStyleToSelection();
-    });
-
-    noFillInput.addEventListener("change", () => {
-        if (noFillInput.checked) {
-            currentStyle.fill = undefined;
-            fillColor.disabled = true;
-        } else {
-            currentStyle.fill = fillColor.value;
-            fillColor.disabled = false;
-        }
-
-        applyCurrentStyleToSelection();
-    });
-
-    strokeColorInput.addEventListener("input", () => {
-        noStrokeInput.checked = false;
-        strokeColor.disabled = false;
-
-        currentStyle.stroke = strokeColorInput.value;
-
-        applyCurrentStyleToSelection();
-    });
-
-    noStrokeInput.addEventListener("change", () => {
-        if (noStrokeInput.checked) {
-            currentStyle.stroke = undefined;
-            strokeColor.disabled = true;
-        } else {
-            currentStyle.stroke = strokeColor.value;
-            strokeColor.disabled = false;
-        }
-
-        applyCurrentStyleToSelection();
-    });
-
-    strokeWidthInput.addEventListener("input", () => {
-        currentStyle.strokeWidth = Number(strokeWidthInput.value) || 0;
         applyCurrentStyleToSelection();
     });
 
@@ -756,33 +736,83 @@ function main(): void {
         reader.readAsDataURL(file);
     });
 
-    bringForwardButton.addEventListener("click", () => {
-        const index = getSelectedShapeIndex();
+    loadButton.addEventListener("click", () => {
+        const json = localStorage.getItem("logo-editor-scene");
 
-        if (index === -1 || index >= editorState.scene.nodes.length - 1) {
+        if (!json) {
+            console.log("No saved scene found");
             return;
         }
 
-        const beforeNodes = [...editorState.scene.nodes];
-        const afterNodes = [...editorState.scene.nodes];
+        const loadedScene = deserializeScene(json);
+        editorState.scene.nodes = loadedScene.nodes;
+        editorState.selectedShapeId = null;
+        interaction = { type: "idle" };
 
-        [
-            afterNodes[index],
-            afterNodes[index + 1]
-        ] = [
-                afterNodes[index + 1],
-                afterNodes[index]
-            ];
-
-        history.execute(
-            new ReorderLayerCommand(
-                editorState,
-                beforeNodes,
-                afterNodes
-            )
-        );
-
+        console.log("Scene loaded");
         render();
+    });
+
+    lineToolButton.addEventListener("click", () => {
+        activeTool = "line";
+
+        syncActiveToolButtons();
+
+        console.log("Active tool: line")
+    });
+
+    multiSelectToolButton.addEventListener("click", () => {
+        activeTool = "multi-select";
+
+        syncActiveToolButtons();
+
+        console.log("Active tool: multi-select");
+    });
+
+    noFillInput.addEventListener("change", () => {
+        if (noFillInput.checked) {
+            currentStyle.fill = undefined;
+            fillColor.disabled = true;
+        } else {
+            currentStyle.fill = fillColor.value;
+            fillColor.disabled = false;
+        }
+
+        applyCurrentStyleToSelection();
+    });
+
+    noStrokeInput.addEventListener("change", () => {
+        if (noStrokeInput.checked) {
+            currentStyle.stroke = undefined;
+            strokeColor.disabled = true;
+        } else {
+            currentStyle.stroke = strokeColor.value;
+            strokeColor.disabled = false;
+        }
+
+        applyCurrentStyleToSelection();
+    });
+
+    rectToolButton.addEventListener("click", () => {
+        activeTool = "rect";
+
+        syncActiveToolButtons();
+
+        console.log("Active tool: rect");
+    });
+
+    saveButton.addEventListener("click", () => {
+        const json = serializeScene(editorState.scene);
+        localStorage.setItem("logo-editor-scene", json);
+        console.log("Scene saved");
+    });
+
+    selectToolButton.addEventListener("click", () => {
+        activeTool = "select";
+
+        syncActiveToolButtons();
+
+        console.log("Active tool: select");
     });
 
     sendBackwardButton.addEventListener("click", () => {
@@ -802,31 +832,6 @@ function main(): void {
                 afterNodes[index - 1],
                 afterNodes[index]
             ];
-
-        history.execute(
-            new ReorderLayerCommand(
-                editorState,
-                beforeNodes,
-                afterNodes
-            )
-        );
-
-        render();
-    });
-
-    bringFrontButton.addEventListener("click", () => {
-        const index = getSelectedShapeIndex();
-
-        if (index === -1 || index === editorState.scene.nodes.length - 1) {
-            return;
-        }
-
-        const beforeNodes = [...editorState.scene.nodes];
-        const afterNodes = [...editorState.scene.nodes];
-
-        const [node] = afterNodes.splice(index, 1);
-
-        afterNodes.push(node); // pushes node to the very end (visually on top)
 
         history.execute(
             new ReorderLayerCommand(
@@ -860,6 +865,20 @@ function main(): void {
         );
 
         render();
+    });
+
+    strokeColorInput.addEventListener("input", () => {
+        noStrokeInput.checked = false;
+        strokeColor.disabled = false;
+
+        currentStyle.stroke = strokeColorInput.value;
+
+        applyCurrentStyleToSelection();
+    });
+
+    strokeWidthInput.addEventListener("input", () => {
+        currentStyle.strokeWidth = Number(strokeWidthInput.value) || 0;
+        applyCurrentStyleToSelection();
     });
 
     canvas.addEventListener("dragover", (event) => {
@@ -1027,6 +1046,37 @@ function main(): void {
             interaction = {
                 type: "creating-line",
                 startPoint: point,
+                previewShapeId,
+            };
+
+            render();
+            return;
+        }
+
+        if (activeTool === "brush") {
+            const previewShapeId = generateId("brush");
+
+            const brushShape: BrushShape = {
+                type: "brush",
+                id: previewShapeId,
+                points: [vec2(point.x, point.y)],
+                transform: identityTransform(),
+                style: {
+                    fill: undefined,
+                    // brush color comes from the current fill color
+                    stroke: currentStyle.fill ?? "rgb(0, 0, 0)",
+                    strokeWidth: 6,
+
+                },
+            };
+
+            editorState.scene.nodes.push({
+                type: "shape",
+                shape: brushShape,
+            });
+
+            interaction = {
+                type: "creating-brush",
                 previewShapeId,
             };
 
@@ -1251,11 +1301,94 @@ function main(): void {
             event.clientY - rect.top
         );
 
-        if (interaction.type === "dragging") {
-            canvas.style.cursor = "grabbing";
+        if (interaction.type === "creating-brush") {
+            const shape = findShapeById(
+                editorState.scene,
+                interaction.previewShapeId
+            );
+
+            if (!shape || shape.type !== "brush") {
+                return;
+            }
+
+            const lastPoint = shape.points[shape.points.length - 1];
+
+            const distance = Math.hypot(
+                point.x - lastPoint.x,
+                point.y - lastPoint.y
+            );
+
+            if (distance >= 2) {    // prevents storing tons of nearly identical points for tiny mouse mvmts.
+                shape.points.push(
+                    vec2(
+                        point.x,
+                        point.y
+                    )
+                );
+            }
+
+            render();
+            return;
         }
 
-        if (interaction.type === "rotating") {
+        if (interaction.type === "creating-ellipse") {
+            const shape = findShapeById(editorState.scene, interaction.previewShapeId);
+
+            if (!shape || shape.type !== "ellipse") return;
+
+            const preview = makeEllipseFromDrag(
+                interaction.startPoint,
+                point,
+                interaction.previewShapeId
+            );
+
+            shape.center = preview.center;
+            shape.radiusX = preview.radiusX;
+            shape.radiusY = preview.radiusY;
+
+            render();
+            return;
+        }
+
+        if (interaction.type === "creating-line") {
+            const shape = findShapeById(editorState.scene, interaction.previewShapeId);
+
+            if (!shape || shape.type !== "line") return;
+
+            const preview = makeLineFromDrag(
+                interaction.startPoint,
+                point,
+                interaction.previewShapeId,
+                true
+            );
+
+            shape.start = preview.start;
+            shape.end = preview.end;
+
+            render();
+            return;
+        }
+
+        if (interaction.type === "creating-rect") {
+            const shape = findShapeById(editorState.scene, interaction.previewShapeId);
+
+            if (!shape || shape.type !== "rect") return;
+
+            const preview = makeRectFromDrag(
+                interaction.startPoint,
+                point,
+                interaction.previewShapeId
+            );
+
+            shape.origin = preview.origin;
+            shape.width = preview.width;
+            shape.height = preview.height;
+
+            render();
+            return;
+        }
+
+        if (interaction.type === "dragging") {
             canvas.style.cursor = "grabbing";
         }
 
@@ -1305,90 +1438,11 @@ function main(): void {
             render();
         }
 
-        if (interaction.type === "creating-rect") {
-            const shape = findShapeById(editorState.scene, interaction.previewShapeId);
-
-            if (!shape || shape.type !== "rect") return;
-
-            const preview = makeRectFromDrag(
-                interaction.startPoint,
-                point,
-                interaction.previewShapeId
-            );
-
-            shape.origin = preview.origin;
-            shape.width = preview.width;
-            shape.height = preview.height;
-
-            render();
-            return;
-        }
-
-        if (interaction.type === "resizing-rect") {
-            const shape = findShapeById(editorState.scene, interaction.shapeId);
-            if (!shape || shape.type !== "rect") return;
-
-            const localPoint = applyInverseTransform(point, shape.transform);
-
-            let left = interaction.startLeft;
-            let top = interaction.startTop;
-            let right = interaction.startRight;
-            let bottom = interaction.startBottom;
-
-            if (interaction.handle === "se") {
-                right = localPoint.x;
-                bottom = localPoint.y;
-            } else if (interaction.handle === "sw") {
-                left = localPoint.x;
-                bottom = localPoint.y;
-            } else if (interaction.handle === "ne") {
-                right = localPoint.x;
-                top = localPoint.y
-            } else if (interaction.handle === "nw") {
-                left = localPoint.x;
-                top = localPoint.y;
-            }
-
-            const minSize = 10;
-
-            if (right - left < minSize) {
-                if (interaction.handle === "sw" || interaction.handle === "nw") {
-                    left = right - minSize;
-                } else {
-                    right = left + minSize;
-                }
-            }
-
-            if (bottom - top < minSize) {
-                if (interaction.handle === "nw" || interaction.handle === "ne") {
-                    top = bottom - minSize;
-                } else {
-                    bottom = top + minSize;
-                }
-            }
-
-            shape.origin = { x: left, y: top };
-            shape.width = right - left;
-            shape.height = bottom - top;
-
-            render();
-            return;
-        }
-
-        if (interaction.type === "creating-ellipse") {
-            const shape = findShapeById(editorState.scene, interaction.previewShapeId);
-
-            if (!shape || shape.type !== "ellipse") return;
-
-            const preview = makeEllipseFromDrag(
-                interaction.startPoint,
-                point,
-                interaction.previewShapeId
-            );
-
-            shape.center = preview.center;
-            shape.radiusX = preview.radiusX;
-            shape.radiusY = preview.radiusY;
+        if (interaction.type === "marquee-selecting") {
+            interaction = {
+                ...interaction,
+                currentPoint: point,
+            };
 
             render();
             return;
@@ -1429,42 +1483,6 @@ function main(): void {
             shape.center = { ...interaction.startCenter };
             shape.radiusX = newRadiusX;
             shape.radiusY = newRadiusY;
-
-            render();
-            return;
-        }
-
-        if (interaction.type === "creating-line") {
-            const shape = findShapeById(editorState.scene, interaction.previewShapeId);
-
-            if (!shape || shape.type !== "line") return;
-
-            const preview = makeLineFromDrag(
-                interaction.startPoint,
-                point,
-                interaction.previewShapeId,
-                true
-            );
-
-            shape.start = preview.start;
-            shape.end = preview.end;
-
-            render();
-            return;
-        }
-
-        if (interaction.type === "resizing-line") {
-            const shape = findShapeById(editorState.scene, interaction.shapeId);
-            if (!shape || shape.type !== "line") return;
-
-            // allows resizing to work correctly even if the line has been rotated:
-            const localPoint = applyInverseTransform(point, shape.transform);
-
-            if (interaction.handle === "start") {
-                shape.start = localPoint;
-            } else {
-                shape.end = localPoint;
-            }
 
             render();
             return;
@@ -1547,17 +1565,81 @@ function main(): void {
             return;
         }
 
-        if (interaction.type === "marquee-selecting") {
-            interaction = {
-                ...interaction,
-                currentPoint: point,
-            };
+        if (interaction.type === "resizing-line") {
+            const shape = findShapeById(editorState.scene, interaction.shapeId);
+            if (!shape || shape.type !== "line") return;
+
+            // allows resizing to work correctly even if the line has been rotated:
+            const localPoint = applyInverseTransform(point, shape.transform);
+
+            if (interaction.handle === "start") {
+                shape.start = localPoint;
+            } else {
+                shape.end = localPoint;
+            }
 
             render();
             return;
         }
 
+        if (interaction.type === "resizing-rect") {
+            const shape = findShapeById(editorState.scene, interaction.shapeId);
+            if (!shape || shape.type !== "rect") return;
+
+            const localPoint = applyInverseTransform(point, shape.transform);
+
+            let left = interaction.startLeft;
+            let top = interaction.startTop;
+            let right = interaction.startRight;
+            let bottom = interaction.startBottom;
+
+            if (interaction.handle === "se") {
+                right = localPoint.x;
+                bottom = localPoint.y;
+            } else if (interaction.handle === "sw") {
+                left = localPoint.x;
+                bottom = localPoint.y;
+            } else if (interaction.handle === "ne") {
+                right = localPoint.x;
+                top = localPoint.y
+            } else if (interaction.handle === "nw") {
+                left = localPoint.x;
+                top = localPoint.y;
+            }
+
+            const minSize = 10;
+
+            if (right - left < minSize) {
+                if (interaction.handle === "sw" || interaction.handle === "nw") {
+                    left = right - minSize;
+                } else {
+                    right = left + minSize;
+                }
+            }
+
+            if (bottom - top < minSize) {
+                if (interaction.handle === "nw" || interaction.handle === "ne") {
+                    top = bottom - minSize;
+                } else {
+                    bottom = top + minSize;
+                }
+            }
+
+            shape.origin = { x: left, y: top };
+            shape.width = right - left;
+            shape.height = bottom - top;
+
+            render();
+            return;
+        }
+
+        // if (interaction.type === "rotating") {
+        //     canvas.style.cursor = "grabbing";
+        // }
+
         if (interaction.type === "rotating") {
+            canvas.style.cursor = "grabbing";
+
             const shape = findShapeById(editorState.scene, interaction.shapeId);
             if (!shape) return;
 
@@ -1609,115 +1691,40 @@ function main(): void {
             event.clientY - rect.top
         );
 
-        if (interaction.type === "marquee-selecting") {
-            const marqueeBounds = makeBoundsFromPoints(
-                interaction.startPoint,
-                interaction.currentPoint
-            );
-
-            const selectedIds: string[] = [];
-
-            for (const node of editorState.scene.nodes) {
-                if (node.type !== "shape") continue;
-
-                const shapeBounds = getShapeBoundsWorld(node.shape);
-
-                if (boundsIntersect(marqueeBounds, shapeBounds)) {
-                    selectedIds.push(node.shape.id);
-                }
-            }
-
-            editorState.selectedShapeIds = selectedIds;
-            editorState.selectedShapeId = selectedIds.length === 1 ? selectedIds[0] : null;
-
-            interaction = { type: "idle" };
-            render();
-            return;
-        }
-
-        if (interaction.type === "creating-rect") {
-            const shape = findShapeById(editorState.scene, interaction.previewShapeId);
-            const previewId = interaction.previewShapeId;
-
-            if (shape && shape.type === "rect") {
-                const finalRect = {
-                    ...shape,
-                    style: {
-                        fill: currentStyle.fill,
-                        stroke: currentStyle.stroke,
-                        strokeWidth: currentStyle.strokeWidth,
-                    },
-                };
-
-                // remove preview node
-                editorState.scene.nodes = editorState.scene.nodes.filter((node) => {
-                    return !(node.type === "shape" && node.shape.id === previewId);
-                });
-
-                //only commit if it has visible size
-                if (finalRect.width > 2 && finalRect.height > 2) {
-                    history.execute(new AddShapeCommand(editorState, finalRect));
-                    editorState.selectedShapeId = finalRect.id;
-                } else {
-                    editorState.selectedShapeId = null;
-                }
-            }
-
-            interaction = { type: "idle" };
-            render();
-            return;
-        }
-
-        if (interaction.type === "resizing-rect") {
-            const shape = findShapeById(editorState.scene, interaction.shapeId);
-            if (shape && shape.type === "rect") {
-                history.execute(
-                    new ResizeRectCommand(
-                        editorState,
-                        interaction.shapeId,
-                        {
-                            x: interaction.startLeft,
-                            y: interaction.startTop,
-                        },
-                        interaction.startRight - interaction.startLeft,
-                        interaction.startBottom - interaction.startTop,
-                        { ...shape.origin },
-                        shape.width,
-                        shape.height
-                    )
-                );
-            }
-
-            interaction = { type: "idle" };
-            render();
-            return;
-        }
-
-        if (interaction.type === "resizing-image") {
+        if (interaction.type === "creating-brush") {
             const shape = findShapeById(
                 editorState.scene,
-                interaction.shapeId
+                interaction.previewShapeId
             );
 
-            if (shape && shape.type === "image") {
-                history.execute(
-                    new ResizeImageCommand(
-                        editorState,
-                        interaction.shapeId,
-                        { ...interaction.startOrigin },
-                        interaction.startWidth,
-                        interaction.startHeight,
-                        { ...shape.origin },
-                        shape.width,
-                        shape.height
-                    )
-                );
+            const previewId = interaction.previewShapeId;
+
+            if (shape && shape.type === "brush") {
+                editorState.scene.nodes =
+                    editorState.scene.nodes.filter(
+                        (node) => !(
+                            node.type ===
+                            "shape" &&
+                            node.shape.id ===
+                            previewId
+                        )
+                    );
+
+                if (shape.points.length >= 2) {
+                    history.execute(
+                        new AddShapeCommand(
+                            editorState,
+                            shape
+                        )
+                    );
+                }
             }
 
-            interaction = { type: "idle" };
+            interaction = {
+                type: "idle",
+            };
 
             render();
-
             return;
         }
 
@@ -1745,28 +1752,6 @@ function main(): void {
                 } else {
                     editorState.selectedShapeId = null;
                 }
-            }
-
-            interaction = { type: "idle" };
-            render();
-            return;
-        }
-
-        if (interaction.type === "resizing-ellipse") {
-            const shape = findShapeById(editorState.scene, interaction.shapeId);
-            if (shape && shape.type === "ellipse") {
-                history.execute(
-                    new ResizeEllipseCommand(
-                        editorState,
-                        interaction.shapeId,
-                        interaction.startCenter,
-                        interaction.startRadiusX,
-                        interaction.startRadiusY,
-                        { ...shape.center },
-                        shape.radiusX,
-                        shape.radiusY
-                    )
-                );
             }
 
             interaction = { type: "idle" };
@@ -1812,6 +1797,115 @@ function main(): void {
             return;
         }
 
+        if (interaction.type === "creating-rect") {
+            const shape = findShapeById(editorState.scene, interaction.previewShapeId);
+            const previewId = interaction.previewShapeId;
+
+            if (shape && shape.type === "rect") {
+                const finalRect = {
+                    ...shape,
+                    style: {
+                        fill: currentStyle.fill,
+                        stroke: currentStyle.stroke,
+                        strokeWidth: currentStyle.strokeWidth,
+                    },
+                };
+
+                // remove preview node
+                editorState.scene.nodes = editorState.scene.nodes.filter((node) => {
+                    return !(node.type === "shape" && node.shape.id === previewId);
+                });
+
+                //only commit if it has visible size
+                if (finalRect.width > 2 && finalRect.height > 2) {
+                    history.execute(new AddShapeCommand(editorState, finalRect));
+                    editorState.selectedShapeId = finalRect.id;
+                } else {
+                    editorState.selectedShapeId = null;
+                }
+            }
+
+            interaction = { type: "idle" };
+            render();
+            return;
+        }
+
+        if (interaction.type === "marquee-selecting") {
+            const marqueeBounds = makeBoundsFromPoints(
+                interaction.startPoint,
+                interaction.currentPoint
+            );
+
+            const selectedIds: string[] = [];
+
+            for (const node of editorState.scene.nodes) {
+                if (node.type !== "shape") continue;
+
+                const shapeBounds = getShapeBoundsWorld(node.shape);
+
+                if (boundsIntersect(marqueeBounds, shapeBounds)) {
+                    selectedIds.push(node.shape.id);
+                }
+            }
+
+            editorState.selectedShapeIds = selectedIds;
+            editorState.selectedShapeId = selectedIds.length === 1 ? selectedIds[0] : null;
+
+            interaction = { type: "idle" };
+            render();
+            return;
+        }
+
+        if (interaction.type === "resizing-ellipse") {
+            const shape = findShapeById(editorState.scene, interaction.shapeId);
+            if (shape && shape.type === "ellipse") {
+                history.execute(
+                    new ResizeEllipseCommand(
+                        editorState,
+                        interaction.shapeId,
+                        interaction.startCenter,
+                        interaction.startRadiusX,
+                        interaction.startRadiusY,
+                        { ...shape.center },
+                        shape.radiusX,
+                        shape.radiusY
+                    )
+                );
+            }
+
+            interaction = { type: "idle" };
+            render();
+            return;
+        }
+
+        if (interaction.type === "resizing-image") {
+            const shape = findShapeById(
+                editorState.scene,
+                interaction.shapeId
+            );
+
+            if (shape && shape.type === "image") {
+                history.execute(
+                    new ResizeImageCommand(
+                        editorState,
+                        interaction.shapeId,
+                        { ...interaction.startOrigin },
+                        interaction.startWidth,
+                        interaction.startHeight,
+                        { ...shape.origin },
+                        shape.width,
+                        shape.height
+                    )
+                );
+            }
+
+            interaction = { type: "idle" };
+
+            render();
+
+            return;
+        }
+
         if (interaction.type === "resizing-line") {
             const shape = findShapeById(editorState.scene, interaction.shapeId);
 
@@ -1824,6 +1918,31 @@ function main(): void {
                         interaction.startEnd,
                         { ...shape.start },
                         { ...shape.end }
+                    )
+                );
+            }
+
+            interaction = { type: "idle" };
+            render();
+            return;
+        }
+
+        if (interaction.type === "resizing-rect") {
+            const shape = findShapeById(editorState.scene, interaction.shapeId);
+            if (shape && shape.type === "rect") {
+                history.execute(
+                    new ResizeRectCommand(
+                        editorState,
+                        interaction.shapeId,
+                        {
+                            x: interaction.startLeft,
+                            y: interaction.startTop,
+                        },
+                        interaction.startRight - interaction.startLeft,
+                        interaction.startBottom - interaction.startTop,
+                        { ...shape.origin },
+                        shape.width,
+                        shape.height
                     )
                 );
             }

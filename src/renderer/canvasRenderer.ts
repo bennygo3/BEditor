@@ -1,4 +1,4 @@
-import type { Shape, RectShape, EllipseShape, LineShape, ImageShape } from "../engine/geometry/shape";
+import type { Shape, RectShape, EllipseShape, LineShape, ImageShape, BrushShape } from "../engine/geometry/shape";
 import { getShapeBoundsWorld } from "../engine/geometry/bounds";
 import { getRotateHandleAnchor, getRotateHandlePosition } from "../engine/geometry/rotateHandles";
 import { getEllipseHandlePositions } from "../engine/geometry/ellipseHandles";
@@ -406,7 +406,7 @@ export class CanvasRenderer {
 
         this.ctx.strokeStyle = shape.style.stroke ?? "rgb(0, 0, 0)";
 
-        this.ctx.lineWidth = shape.style.stokeWidth ?? 4;
+        this.ctx.lineWidth = shape.style.strokeWidth ?? 4;
 
         this.ctx.lineCap = "round";
         this.ctx.lineJoin = "round";

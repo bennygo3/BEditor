@@ -17,6 +17,7 @@ export * from "./export/svg";
 export * from "./export/raster";
 export * from "./geometry/bounds";
 export * from "./geometry/boundsIntersect";
+export * from "./geometry/brushGeometry";
 export * from "./geometry/center";
 export * from "./geometry/ellipseHandles";
 export * from "./geometry/groupBounds";

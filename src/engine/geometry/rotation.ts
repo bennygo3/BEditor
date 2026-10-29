@@ -1,22 +1,34 @@
 import type { Shape } from "./shape";
 import type { Vec2 } from "../math/vec2";
+import { getBrushLocalCenter } from "./brushGeometry";
 
 function getLocalCenter(shape: Shape): Vec2 {
-    if (shape.type === "rect" || shape.type === "image") {
-        return {
-            x: shape.origin.x + shape.width / 2,
-            y: shape.origin.y + shape.height / 2,
-        };
-    }
+    switch (shape.type) {
+        case "rect":
+            return {
+                x: shape.origin.x + shape.width / 2,
+                y: shape.origin.y + shape.height / 2,
+            };
 
-    if (shape.type === "line") {
-        return {
-            x: (shape.start.x + shape.end.x) / 2,
-            y: (shape.start.y + shape.end.y) / 2,
-        };
-    }
+        case "ellipse":
+            return {
+                ...shape.center
+            };
 
-    return { ...shape.center };
+        case "line":
+            return {
+                x: (shape.start.x + shape.end.x) / 2,
+                y: (shape.start.y + shape.end.y) / 2,
+            };
+
+        case "image": 
+            return {
+                x: shape.origin.x + shape.width / 2,
+                y: shape.origin.y + shape.height / 2,
+            };
+
+        case "brush": return getBrushLocalCenter(shape);
+    }
 }
 
 export function setShapeRotationCenter(

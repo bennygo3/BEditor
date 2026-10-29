@@ -59,6 +59,37 @@ export function getShapeBoundsWorld(shape: Shape): Bounds {
         // return boundsFromPoints(pointsWorld);
     }
 
+    if (shape.type === "brush") {
+        const pointsWorld = shape.points.map((point) => 
+            applyTransform(
+                point,
+                shape.transform
+            )
+        );
+
+        if (pointsWorld.length === 0) {
+            return {
+                min: { x: 0, y: 0 },
+                max: { x: 0, y: 0 },
+            };
+        }
+
+        const bounds = boundsFromPoints(pointsWorld);
+
+        const padding = (shape.style.strokeWidth ?? 1) / 2;
+
+        return {
+            min: {
+                x: bounds.min.x - padding,
+                y: bounds.min.y - padding,
+            },
+            max: {
+                x: bounds.max.x + padding,
+                y: bounds.max.y + padding,
+            },
+        };
+    }
+
     // ellipse: approximate bounds using 4 cardinal points (works w/ rotation as well)
     const { center, radiusX, radiusY, transform } = shape;
 
