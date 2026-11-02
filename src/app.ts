@@ -44,6 +44,7 @@ import {
     CanvasRenderer,
     getCanvasPointFromClient,
     setupHighDpiCanvas,
+    makeSmoothBezierPath,
 } from "./engine";
 
 
@@ -1056,10 +1057,18 @@ function main(): void {
         if (activeTool === "brush") {
             const previewShapeId = generateId("brush");
 
+            const rawPoints = [
+                vec2(point.x, point.y),
+            ]
+
             const brushShape: BrushShape = {
                 type: "brush",
                 id: previewShapeId,
-                points: [vec2(point.x, point.y)],
+                path: makeSmoothBezierPath(
+                    rawPoints,
+                    false,
+                    2
+                ),
                 transform: identityTransform(),
                 style: {
                     fill: undefined,
@@ -1078,6 +1087,33 @@ function main(): void {
             interaction = {
                 type: "creating-brush",
                 previewShapeId,
+                rawPoints,
+                lastPointer: point,
+            };
+
+            render();
+            return;
+        }
+
+        if (activeTool === "mask-trace") {
+            if (!editorState.selectedShapeId) {
+                return;
+            }
+
+            const image = findShapeById(
+                editorState.scene,
+                editorState.selectedShapeId
+            );
+
+            if (!image || image.type !== "image") { return;}
+
+            const localPoint = applyInverseTransform(point, image.transform);
+
+            interaction = {
+                type: "creating-mask",
+                imageId: image.id,
+                rawPoints: [localPoint],
+                lastPointer: point,
             };
 
             render();
@@ -1302,6 +1338,21 @@ function main(): void {
         );
 
         if (interaction.type === "creating-brush") {
+            const distance = Math.hypot(
+                point.x - interaction.lastPointer.x,
+                point.y - interaction.lastPointer.y
+            );
+
+            if (distance < 2) {
+                return;
+            }
+
+            const rawPoints = [
+                ...interaction.rawPoints,
+                vec2(point.x, point.y),
+            ];
+
+
             const shape = findShapeById(
                 editorState.scene,
                 interaction.previewShapeId
@@ -1311,21 +1362,28 @@ function main(): void {
                 return;
             }
 
-            const lastPoint = shape.points[shape.points.length - 1];
-
-            const distance = Math.hypot(
-                point.x - lastPoint.x,
-                point.y - lastPoint.y
+            shape.path = makeSmoothBezierPath(
+                rawPoints,
+                false,
+                2
             );
 
-            if (distance >= 2) {    // prevents storing tons of nearly identical points for tiny mouse mvmts.
-                shape.points.push(
-                    vec2(
-                        point.x,
-                        point.y
-                    )
-                );
-            }
+            interaction = {
+                ...interaction,
+                rawPoints,
+                lastPointer: point,
+            };
+
+            // const lastPoint = shape.points[shape.points.length - 1];
+
+            // if (distance >= 2) {    // prevents storing tons of nearly identical points for tiny mouse mvmts.
+            //     shape.points.push(
+            //         vec2(
+            //             point.x,
+            //             point.y
+            //         )
+            //     );
+            // }
 
             render();
             return;
@@ -1364,6 +1422,43 @@ function main(): void {
 
             shape.start = preview.start;
             shape.end = preview.end;
+
+            render();
+            return;
+        }
+
+        if (interaction.type === "creating-mask") {
+            const distance = Math.hypot(
+                point.x - interaction.lastPointer.x,
+                point.y - interaction.lastPointer.y
+            );
+
+            if (distance < 2) {
+                return;
+            }
+
+            const image = findShapeById(
+                editorState.scene,
+                interaction.imageId
+            );
+
+            if (!image || image.type !== "image") {
+                return;
+            }
+
+            const localPoint = applyInverseTransform(
+                point, 
+                image.transform
+            );
+
+            interaction = {
+                ...interaction,
+                rawPoints: [
+                    ...interaction.rawPoints,
+                    localPoint,
+                ],
+                lastPointer: point,
+            };
 
             render();
             return;
@@ -1633,10 +1728,6 @@ function main(): void {
             return;
         }
 
-        // if (interaction.type === "rotating") {
-        //     canvas.style.cursor = "grabbing";
-        // }
-
         if (interaction.type === "rotating") {
             canvas.style.cursor = "grabbing";
 
@@ -1700,17 +1791,21 @@ function main(): void {
             const previewId = interaction.previewShapeId;
 
             if (shape && shape.type === "brush") {
+                shape.path = makeSmoothBezierPath(
+                    interaction.rawPoints,
+                    false,
+                    2
+                );
+
                 editorState.scene.nodes =
                     editorState.scene.nodes.filter(
                         (node) => !(
-                            node.type ===
-                            "shape" &&
-                            node.shape.id ===
-                            previewId
+                            node.type === "shape" &&
+                            node.shape.id === previewId
                         )
                     );
 
-                if (shape.points.length >= 2) {
+                if (shape.path.anchors.length >= 2) {
                     history.execute(
                         new AddShapeCommand(
                             editorState,
@@ -1793,6 +1888,35 @@ function main(): void {
             }
 
             interaction = { type: "idle" };
+            render();
+            return;
+        }
+
+        if (interaction.type === "creating-mask") {
+            const image = findShapeById(
+                editorState.scene,
+                interaction.imageId
+            );
+
+            if (
+                image &&
+                image.type === "image" &&
+                interaction.rawPoints.length >= 3
+            ) {
+                image.mask = {
+                    path: makeSmoothBezierPath(
+                        interaction.rawPoints,
+                        true,
+                        2
+                    ),
+                    inverted: false,
+                };
+            }
+
+            interaction = {
+                type: "idle",
+            };
+
             render();
             return;
         }

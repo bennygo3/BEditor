@@ -1,1 +1,1 @@
-export type Tool = "select" | "multi-select" | "rect" | "ellipse" | "line" | "brush" | "eraser";
+export type Tool = "select" | "multi-select" | "rect" | "ellipse" | "line" | "brush" | "eraser" | "mask-trace";

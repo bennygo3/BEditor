@@ -9,6 +9,7 @@ import { getImageHandlePositions } from "../engine";
 import type { Scene } from "../engine/scene/scene";
 import type { SceneNode } from "../engine/scene/node";
 import type { Vec2 } from "../engine/math/vec2";
+import { traceBezierPath } from "../engine/geometry/path";
 
 export class CanvasRenderer {
     private imageCache = new Map<string, HTMLImageElement>();
@@ -16,7 +17,7 @@ export class CanvasRenderer {
     constructor(
         private ctx: CanvasRenderingContext2D,
         private requestRender?: () => void
-    ) {}
+    ) { }
 
     renderScene(scene: Scene): void {       // Scene data
         const { canvas } = this.ctx;
@@ -102,7 +103,7 @@ export class CanvasRenderer {
     renderRectHandles(shape: RectShape): void {
         const handlesMap = getRectHandlePositions(shape);
         // const bounds = getShapeBoundsWorld(shape);
-        
+
         const handles = [
             handlesMap.nw,
             handlesMap.ne,
@@ -296,6 +297,21 @@ export class CanvasRenderer {
     }
 
     private renderImage(shape: ImageShape): void {
+        this.ctx.save();
+
+        if (
+            shape.mask && 
+            shape.mask.path.anchors.length >= 3
+        ) {
+            traceBezierPath(
+                this.ctx,
+                shape.mask.path,
+                shape.transform
+            );
+
+            this.ctx.clip();
+        }
+        
         let image = this.imageCache.get(shape.src);
 
         if (!image) {
@@ -377,34 +393,21 @@ export class CanvasRenderer {
     }
 
     private renderBrush(shape: BrushShape): void {
-        if (shape.points.length < 2) {
+        if (shape.path.anchors.length < 2) {
             return;
         }
 
-        const points = shape.points.map((point) => 
-            applyTransform(
-                point,
-                shape.transform
-            )
-        );
-
         this.ctx.save();
 
-        this.ctx.beginPath();
-
-        this.ctx.moveTo(
-            points[0].x,
-            points[0].y
+        traceBezierPath(
+            this.ctx,
+            shape.path,
+            shape.transform
         );
 
-        for (let i = 1; i < points.length; i++) {
-            this.ctx.lineTo(
-                points[i].x,
-                points[i].y
-            );
-        }
-
-        this.ctx.strokeStyle = shape.style.stroke ?? "rgb(0, 0, 0)";
+        this.ctx.strokeStyle = 
+            shape.style.stroke ??
+            "rgb(0, 0, 0)";
 
         this.ctx.lineWidth = shape.style.strokeWidth ?? 4;
 
@@ -414,7 +417,48 @@ export class CanvasRenderer {
         this.ctx.stroke();
 
         this.ctx.restore();
+
     }
+
+    // private renderBrush(shape: BrushShape): void {
+    //     if (shape.points.length < 2) {
+    //         return;
+    //     }
+
+    //     const points = shape.points.map((point) => 
+    //         applyTransform(
+    //             point,
+    //             shape.transform
+    //         )
+    //     );
+
+    //     this.ctx.save();
+
+    //     this.ctx.beginPath();
+
+    //     this.ctx.moveTo(
+    //         points[0].x,
+    //         points[0].y
+    //     );
+
+    //     for (let i = 1; i < points.length; i++) {
+    //         this.ctx.lineTo(
+    //             points[i].x,
+    //             points[i].y
+    //         );
+    //     }
+
+    //     this.ctx.strokeStyle = shape.style.stroke ?? "rgb(0, 0, 0)";
+
+    //     this.ctx.lineWidth = shape.style.strokeWidth ?? 4;
+
+    //     this.ctx.lineCap = "round";
+    //     this.ctx.lineJoin = "round";
+
+    //     this.ctx.stroke();
+
+    //     this.ctx.restore();
+    // }
     // renderRact/renderEllipse = pixels on canvas - actual artwork
 
     // renderRectHandles(), renderEllipseHandles(), renderRotateHandle(), renderBounds(): these methods draw editor UI, not the actual shapes - editor UI overlay

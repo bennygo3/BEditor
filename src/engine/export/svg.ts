@@ -2,6 +2,7 @@ import type { Scene } from "../scene/scene";
 import type { SceneNode } from "../scene/node";
 import type { Shape, ImageShape, RectShape, EllipseShape, LineShape, BrushShape } from "../geometry/shape";
 import { downloadBlob } from "./download";
+import { BezierPath } from "../geometry/path";
 
 
 function styleToSvg(
@@ -78,14 +79,66 @@ function lineToSvg(shape: LineShape): string {
     return `<line x1="${shape.start.x}" y1="${shape.start.y}" x2="${shape.end.x}" y2="${shape.end.y}"${transformToSvg(shape)} ${styleToSvg(shape)} />`;
 }
 
-function brushToSvg(shape: BrushShape): string {
-    if (shape.points.length < 2) {
+function bezierPathToSvg(path: BezierPath): string {
+    if (path.anchors.length === 0) {
         return "";
     }
 
-    const points = shape.points
-        .map((point) => `{point.x},${point.y}`)
-        .join(" ");
+    const first = path.anchors[0];
+
+    let d = `M ${first.point.x} ${first.point.y}`;
+
+    const segmentCount = 
+        path.closed 
+            ? path.anchors.length 
+            : path.anchors.length - 1;
+
+    for (let i = 0; i < segmentCount; i++) {
+        const current = path.anchors[i];
+
+        const next = path.anchors[
+            (i + 1) %
+            path.anchors.length
+        ];
+
+        const control1 = {
+            x: 
+                current.point.x +
+                current.handleOut.x,
+            y: 
+                current.point.y +
+                current.handleOut.y,
+        };
+
+        const control2 = {
+            x: 
+                next.point.x +
+                next.handleIn.x,
+            y: 
+                next.point.y + 
+                next.handleIn.y,
+        };
+
+        d += `
+            C ${control1.x} ${control1.y}
+              ${control2.x} ${control2.y}
+              ${next.point.x} ${next.point.y}
+        `;
+    }
+
+    if (path.closed) {
+        d += " Z";
+    }
+
+    return d;
+}
+
+function brushToSvg(shape: BrushShape): string {
+    if (shape.path.anchors.length < 2) {
+        return "";
+    }
+
+    const d = bezierPathToSvg(shape.path);
 
     const stroke = shape.style.stroke ?? "none";
 
@@ -100,8 +153,8 @@ function brushToSvg(shape: BrushShape): string {
     const rotationDegrees = rotation * (180 / Math.PI);
 
     return `
-        <polyline 
-            points="${points}"
+        <path 
+            d="${d}"
             fill="none"
             stroke="${stroke}"
             stroke-width="${strokeWidth}"

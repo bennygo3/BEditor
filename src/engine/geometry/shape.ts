@@ -1,5 +1,6 @@
 import type { Vec2 } from "../math/vec2";
 import type { Transform } from "../math/transform";
+import type { BezierPath } from "./path";
 
 export type Style = {
     fill?: string;
@@ -45,14 +46,22 @@ export type ImageShape = {
     src: string;
     transform: Transform;
     opacity: number;
+    mask?: ImageMask;
 }
 
 export type BrushShape = {
     type: "brush";
     id: string;
-    points: Vec2[];
+    path: BezierPath;
     transform: Transform;
     style: Style;
 }
+
+export type ImageMask = {
+    path: BezierPath;
+    inverted: boolean;
+};
+
+
 
 export type Shape = RectShape | EllipseShape | LineShape | ImageShape | BrushShape;

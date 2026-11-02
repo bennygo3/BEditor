@@ -77,6 +77,14 @@ export type InteractionMode =
     | {
         type: "creating-brush";
         previewShapeId: string;
+        rawPoints: Vec2[];
+        lastPointer: Vec2;
+    }
+    | {
+        type: "creating-mask";
+        imageId: string;
+        rawPoints: Vec2[];
+        lastPointer: Vec2;
     }
     | {
         type: "erasing";

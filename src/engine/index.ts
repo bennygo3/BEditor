@@ -26,6 +26,7 @@ export * from "./geometry/imageHitTest";
 export * from "./geometry/imageHandles";
 export * from "./geometry/lineHandles";
 export * from "./geometry/moveShape";
+export * from "./geometry/path";
 export * from "./geometry/rectHandles";
 export * from "./geometry/rotateHandles";
 export * from "./geometry/rotation";
