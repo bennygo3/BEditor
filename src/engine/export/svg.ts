@@ -1,6 +1,6 @@
 import type { Scene } from "../scene/scene";
 import type { SceneNode } from "../scene/node";
-import type { Shape, ImageShape, RectShape, EllipseShape, LineShape, } from "../geometry/shape";
+import type { Shape, ImageShape, RectShape, EllipseShape, LineShape, BrushShape } from "../geometry/shape";
 import { downloadBlob } from "./download";
 
 
@@ -56,27 +56,64 @@ function imageToSvg(shape: ImageShape): string {
 }
 
 function shapeToSvg(shape: Shape): string {
-    if (shape.type === "image") {
-        return imageToSvg(shape);
-    }
+    switch (shape.type) {
+        case "rect":
+            return rectToSvg(shape); 
 
-    if (shape.type === "rect") {
-        return rectToSvg(shape);
-    }
+        case "ellipse":
+            return ellipseToSvg(shape);
 
-    if (shape.type === "ellipse") {
-        return ellipseToSvg(shape);
-    }
+        case "line":
+            return lineToSvg(shape);
 
-    if (shape.type === "line") {
-        return lineToSvg(shape);
+        case "image":
+            return imageToSvg(shape);
+
+        case "brush":
+            return brushToSvg(shape);
     }
-    
-    return "";
 }
 
 function lineToSvg(shape: LineShape): string {
     return `<line x1="${shape.start.x}" y1="${shape.start.y}" x2="${shape.end.x}" y2="${shape.end.y}"${transformToSvg(shape)} ${styleToSvg(shape)} />`;
+}
+
+function brushToSvg(shape: BrushShape): string {
+    if (shape.points.length < 2) {
+        return "";
+    }
+
+    const points = shape.points
+        .map((point) => `{point.x},${point.y}`)
+        .join(" ");
+
+    const stroke = shape.style.stroke ?? "none";
+
+    const strokeWidth = shape.style.strokeWidth ?? 1;
+
+    const { 
+        position,
+        rotation,
+        scale,
+    } = shape.transform;
+
+    const rotationDegrees = rotation * (180 / Math.PI);
+
+    return `
+        <polyline 
+            points="${points}"
+            fill="none"
+            stroke="${stroke}"
+            stroke-width="${strokeWidth}"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            transform="
+                translate(${position.x} ${position.y})
+                rotate(${rotationDegrees})
+                scale(${scale.x} ${scale.y})
+            "
+        />
+    `;
 }
 
 function nodeToSvg(node: SceneNode): string {
