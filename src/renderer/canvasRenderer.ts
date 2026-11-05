@@ -297,21 +297,6 @@ export class CanvasRenderer {
     }
 
     private renderImage(shape: ImageShape): void {
-        this.ctx.save();
-
-        if (
-            shape.mask && 
-            shape.mask.path.anchors.length >= 3
-        ) {
-            traceBezierPath(
-                this.ctx,
-                shape.mask.path,
-                shape.transform
-            );
-
-            this.ctx.clip();
-        }
-        
         let image = this.imageCache.get(shape.src);
 
         if (!image) {
@@ -337,6 +322,19 @@ export class CanvasRenderer {
         }
 
         this.ctx.save();
+
+        if (
+            shape.mask &&
+            shape.mask.path.anchors.length >= 3
+        ) {
+            traceBezierPath(
+                this.ctx,
+                shape.mask.path,
+                shape.transform
+            );
+
+            this.ctx.clip();
+        }
 
         this.ctx.translate(
             shape.transform.position.x,
@@ -405,7 +403,7 @@ export class CanvasRenderer {
             shape.transform
         );
 
-        this.ctx.strokeStyle = 
+        this.ctx.strokeStyle =
             shape.style.stroke ??
             "rgb(0, 0, 0)";
 

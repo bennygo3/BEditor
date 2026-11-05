@@ -1,5 +1,6 @@
 import type { Vec2 } from "../math/vec2";
 import { applyTransform } from "../math/transform";
+import { getBezierPathWorldBounds } from "./pathGeometry";
 import type { Shape } from "./shape";
 
 export type Bounds = {
@@ -60,21 +61,11 @@ export function getShapeBoundsWorld(shape: Shape): Bounds {
     }
 
     if (shape.type === "brush") {
-        const pointsWorld = shape.points.map((point) => 
-            applyTransform(
-                point,
-                shape.transform
-            )
+
+        const bounds = getBezierPathWorldBounds(
+            shape.path,
+            shape.transform
         );
-
-        if (pointsWorld.length === 0) {
-            return {
-                min: { x: 0, y: 0 },
-                max: { x: 0, y: 0 },
-            };
-        }
-
-        const bounds = boundsFromPoints(pointsWorld);
 
         const padding = (shape.style.strokeWidth ?? 1) / 2;
 

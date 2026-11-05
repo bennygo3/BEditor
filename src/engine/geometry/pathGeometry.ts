@@ -1,4 +1,6 @@
 import type { Vec2 } from "../math/vec2";
+import type { Transform } from "../math/transform";
+import { applyTransform } from "../math/transform";
 import type { BezierPath, PathAnchor } from "./path";
 
 export type PathLocalBounds = {
@@ -233,5 +235,144 @@ export function getBezierPathLocalCenter(
         x: 
             (bounds.min.x + bounds.max.x) / 2,
         y: (bounds.min.y + bounds.max.y) / 2,
+    };
+}
+
+export function getBezierPathWorldBounds(
+    path: BezierPath,
+    transform: Transform
+): PathLocalBounds {
+    if (path.anchors.length === 0) {
+        return {
+            min: {
+                x: 0,
+                y: 0,
+            },
+            max: {
+                x: 0,
+                y: 0,
+            },
+        };
+    }
+
+    const firstWorld = applyTransform(
+        path.anchors[0].point,
+        transform
+    );
+
+    let minX = firstWorld.x;
+    let minY = firstWorld.y;
+    let maxX = firstWorld.x;
+    let maxY = firstWorld.y;
+
+    const segmentCount =
+        path.closed 
+            ? path.anchors.length
+            : path.anchors.length - 1;
+
+    for (let i = 0; i < segmentCount; i++) {
+        const current = path.anchors[i];
+
+        const next = path.anchors[
+            (i + 1) %
+            path.anchors.length
+        ];
+
+        const {
+            start,
+            control1,
+            control2,
+            end,
+        } = getControlPoints(
+            current,
+            next
+        );
+
+        const startWorld = applyTransform(start, transform);
+
+        const control1World = applyTransform(control1, transform);
+
+        const control2World = applyTransform(control2, transform);
+
+        const endWorld = applyTransform(end, transform);
+
+        const xValues = [
+            startWorld.x,
+            endWorld.x,
+        ];
+
+        const yValues = [
+            startWorld.y,
+            endWorld.y,
+        ];
+
+        const xExtrema = getCubicExtrema(
+            startWorld.x,
+            control1World.x,
+            control2World.x,
+            endWorld.x
+        );
+
+        const yExtrema = getCubicExtrema(
+            startWorld.y,
+            control1World.y,
+            control2World.y,
+            endWorld.y
+        );
+
+        for (const t of xExtrema) {
+            xValues.push(
+                cubicAt(
+                    startWorld.x,
+                    control1World.x,
+                    control2World.x,
+                    endWorld.x,
+                    t
+                )
+            );
+        }
+
+        for (const t of yExtrema) {
+            yValues.push(
+                cubicAt(
+                    startWorld.y,
+                    control1World.y,
+                    control2World.y,
+                    endWorld.y,
+                    t
+                )
+            );
+        }
+
+        minX = Math.min(
+            minX,
+            ...xValues
+        );
+
+        maxX = Math.max(
+            maxX,
+            ...xValues
+        );
+
+        minY = Math.min(
+            minY,
+            ...yValues
+        );
+
+        maxY = Math.max(
+            maxY,
+            ...yValues
+        );
+    }
+
+    return {
+        min: {
+            x: minX,
+            y: minY,
+        },
+        max: {
+            x: maxX,
+            y: maxY,
+        },
     };
 }

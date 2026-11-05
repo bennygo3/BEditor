@@ -319,6 +319,7 @@ function main(): void {
     const layersList = document.getElementById("layers-list") as HTMLDivElement | null;
     const lineToolButton = document.getElementById("line-tool") as HTMLButtonElement | null;
     const loadButton = document.getElementById("load-scene") as HTMLButtonElement | null;
+    const maskTraceToolButton = document.getElementById("mask-trace") as HTMLButtonElement | null;
     const multiSelectToolButton = document.getElementById("multi-select") as HTMLButtonElement | null;
     const noFillInput = document.getElementById("no-fill") as HTMLInputElement | null;
     const noStrokeInput = document.getElementById("no-stroke") as HTMLInputElement | null;
@@ -342,7 +343,7 @@ function main(): void {
         !sendBackButton || !sendBackwardButton ||
         !layersList || !noFillInput ||
         !noStrokeInput || !brushToolButton ||
-        !eraserToolButton
+        !eraserToolButton || !maskTraceToolButton
     ) {
         console.error("Save/load/export/etc buttons not found");
         return;
@@ -510,6 +511,8 @@ function main(): void {
         brushToolButton?.classList.toggle("active-tool", activeTool === "eraser");
 
         eraserToolButton?.classList.toggle("activeTool", activeTool === "eraser");
+
+        maskTraceToolButton?.classList.toggle("active-tool", activeTool === "mask-trace");
 
     }
 
@@ -760,6 +763,12 @@ function main(): void {
         syncActiveToolButtons();
 
         console.log("Active tool: line")
+    });
+
+    maskTraceToolButton.addEventListener("click", () => {
+        activeTool = "mask-trace";
+        syncActiveToolButtons();
+        console.log("Active tool: mask-trace");
     });
 
     multiSelectToolButton.addEventListener("click", () => {
@@ -1097,6 +1106,8 @@ function main(): void {
 
         if (activeTool === "mask-trace") {
             if (!editorState.selectedShapeId) {
+                console.warn("select an image before tracing a mask");
+                
                 return;
             }
 
@@ -1105,7 +1116,11 @@ function main(): void {
                 editorState.selectedShapeId
             );
 
-            if (!image || image.type !== "image") { return;}
+            if (!image || image.type !== "image") { 
+                
+                console.warn("Trace mask requires a selected image.");
+                return;
+            }
 
             const localPoint = applyInverseTransform(point, image.transform);
 
