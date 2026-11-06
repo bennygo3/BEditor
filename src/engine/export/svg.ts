@@ -45,21 +45,88 @@ function ellipseToSvg(shape: EllipseShape): string {
 }
 
 function imageToSvg(shape: ImageShape): string {
-    return `<image             
-        href="${shape.src}"
-        x="${shape.origin.x}"
-        y="${shape.origin.y}"
-        width="${shape.width}"
-        height="${shape.height}"
-        opacity="${shape.opacity}"
-        ${transformToSvg(shape)}
-    />`;
+    const {
+        position,
+        rotation,
+        scale,
+    } = shape.transform;
+
+    const rotationDegrees = rotation * (180 / Math.PI);
+
+    const transform = `
+        translate(${position.x} ${position.y})
+        rotate(${rotationDegrees})
+        scale(${scale.x} ${scale.y})
+    `;
+
+    // escape characters that could break XML attributs:
+    const src = shape.src
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;");
+
+    const imageMarkup = `
+        <image             
+            href="${src}"
+            x="${shape.origin.x}"
+            y="${shape.origin.y}"
+            width="${shape.width}"
+            height="${shape.height}"
+            opacity="${shape.opacity}"
+            preserveAspectRatio="none"
+        />
+    `;
+
+    // return `<image             
+    //     href="${shape.src}"
+    //     x="${shape.origin.x}"
+    //     y="${shape.origin.y}"
+    //     width="${shape.width}"
+    //     height="${shape.height}"
+    //     opacity="${shape.opacity}"
+    //     ${transformToSvg(shape)}
+    // />`;
+
+    // normal image without mask
+    if (!shape.mask || shape.mask.path.anchors.length < 3) {
+        return `
+            <g transform="${transform}">
+                ${imageMarkup}
+            </g>
+        `;
+    }
+
+    // converts the closed Bezier mask to svg path data
+    const maskD = bezierPathToSvg(shape.mask.path);
+
+    // gives each image mask a unique svg identifier
+    const clipId = `clip-${shape.id.replace(
+        /[^a-zA-Z0-9_-]/g,
+        "_"
+    )}`;
+
+    return `
+        <g transform="${transform}">
+            <defs>
+                <clipPath 
+                    id="${clipId}"
+                    clipPathUnits="userSpaceOnUse"
+                >
+                    <path d="${maskD}" />
+                </clipPath>
+            </defs>
+
+            <g clip-path="url(#${clipId})">
+                ${imageMarkup}
+            </g>
+        </g>
+    `;
 }
 
 function shapeToSvg(shape: Shape): string {
     switch (shape.type) {
         case "rect":
-            return rectToSvg(shape); 
+            return rectToSvg(shape);
 
         case "ellipse":
             return ellipseToSvg(shape);
@@ -88,9 +155,9 @@ function bezierPathToSvg(path: BezierPath): string {
 
     let d = `M ${first.point.x} ${first.point.y}`;
 
-    const segmentCount = 
-        path.closed 
-            ? path.anchors.length 
+    const segmentCount =
+        path.closed
+            ? path.anchors.length
             : path.anchors.length - 1;
 
     for (let i = 0; i < segmentCount; i++) {
@@ -102,20 +169,20 @@ function bezierPathToSvg(path: BezierPath): string {
         ];
 
         const control1 = {
-            x: 
+            x:
                 current.point.x +
                 current.handleOut.x,
-            y: 
+            y:
                 current.point.y +
                 current.handleOut.y,
         };
 
         const control2 = {
-            x: 
+            x:
                 next.point.x +
                 next.handleIn.x,
-            y: 
-                next.point.y + 
+            y:
+                next.point.y +
                 next.handleIn.y,
         };
 
@@ -144,7 +211,7 @@ function brushToSvg(shape: BrushShape): string {
 
     const strokeWidth = shape.style.strokeWidth ?? 1;
 
-    const { 
+    const {
         position,
         rotation,
         scale,

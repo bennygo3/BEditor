@@ -997,6 +997,23 @@ function main(): void {
             renderer.renderMarquee(marqueeBounds);
         }
 
+        if (interaction.type === "creating-mask") {
+            const image = findShapeById(
+                editorState.scene,
+                interaction.imageId
+            );
+
+            if (image && image.type === "image" && interaction.rawPoints.length >= 2) {
+                const previewPath = makeSmoothBezierPath(
+                    interaction.rawPoints,
+                    false,
+                    2
+                );
+
+                renderer.renderMaskPreview(previewPath, image.transform);
+            }
+        }
+
         renderLayersPanel(); // every time scene changes, the layer panel says sync-ed
     }
 

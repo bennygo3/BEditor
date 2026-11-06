@@ -9,6 +9,8 @@ import { getImageHandlePositions } from "../engine";
 import type { Scene } from "../engine/scene/scene";
 import type { SceneNode } from "../engine/scene/node";
 import type { Vec2 } from "../engine/math/vec2";
+import type { BezierPath } from "../engine/geometry/path";
+import type { Transform } from "../engine/math/transform";
 import { traceBezierPath } from "../engine/geometry/path";
 
 export class CanvasRenderer {
@@ -293,6 +295,45 @@ export class CanvasRenderer {
         this.ctx.fillRect(x, y, width, height);
         this.ctx.strokeRect(x, y, width, height);
 
+        this.ctx.restore();
+    }
+
+    public renderMaskPreview(path: BezierPath, transform: Transform): void {
+        if (path.anchors.length < 2) {
+            return;
+        }
+
+        this.ctx.save();
+
+        traceBezierPath(
+            this.ctx,
+            path,
+            transform
+        );
+
+        this.ctx.strokeStyle = "rgb(37, 99, 235)";
+        this.ctx.lineWidth = 2;
+
+        this.ctx.setLineDash([6, 4]);
+
+        this.ctx.stroke();
+
+        const firstAnchor = path.anchors[0];
+        const firstWorld = applyTransform(firstAnchor.point, transform);
+
+        this.ctx.setLineDash([]);
+        this.ctx.beginPath();
+
+        this.ctx.arc(
+            firstWorld.x,
+            firstWorld.y,
+            5,
+            0,
+            Math.PI * 2
+        );
+
+        this.ctx.fillStyle = "rgb(37, 99, 235)";
+        this.ctx.fill();
         this.ctx.restore();
     }
 
