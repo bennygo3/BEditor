@@ -299,24 +299,24 @@ export class CanvasRenderer {
     }
 
     public renderMaskPreview(path: BezierPath, transform: Transform): void {
-        if (path.anchors.length < 2) {
+        if (path.anchors.length === 0) {
             return;
         }
 
         this.ctx.save();
 
-        traceBezierPath(
-            this.ctx,
-            path,
-            transform
-        );
+        if (path.anchors.length >= 2) {
+            traceBezierPath(
+                this.ctx,
+                path,
+                transform
+            );
+            this.ctx.strokeStyle = "rgb(37, 99, 235)";
+            this.ctx.lineWidth = 2;
 
-        this.ctx.strokeStyle = "rgb(37, 99, 235)";
-        this.ctx.lineWidth = 2;
-
-        this.ctx.setLineDash([6, 4]);
-
-        this.ctx.stroke();
+            this.ctx.setLineDash([6, 4]);
+            this.ctx.stroke();
+        }
 
         const firstAnchor = path.anchors[0];
         const firstWorld = applyTransform(firstAnchor.point, transform);
@@ -459,46 +459,4 @@ export class CanvasRenderer {
 
     }
 
-    // private renderBrush(shape: BrushShape): void {
-    //     if (shape.points.length < 2) {
-    //         return;
-    //     }
-
-    //     const points = shape.points.map((point) => 
-    //         applyTransform(
-    //             point,
-    //             shape.transform
-    //         )
-    //     );
-
-    //     this.ctx.save();
-
-    //     this.ctx.beginPath();
-
-    //     this.ctx.moveTo(
-    //         points[0].x,
-    //         points[0].y
-    //     );
-
-    //     for (let i = 1; i < points.length; i++) {
-    //         this.ctx.lineTo(
-    //             points[i].x,
-    //             points[i].y
-    //         );
-    //     }
-
-    //     this.ctx.strokeStyle = shape.style.stroke ?? "rgb(0, 0, 0)";
-
-    //     this.ctx.lineWidth = shape.style.strokeWidth ?? 4;
-
-    //     this.ctx.lineCap = "round";
-    //     this.ctx.lineJoin = "round";
-
-    //     this.ctx.stroke();
-
-    //     this.ctx.restore();
-    // }
-    // renderRact/renderEllipse = pixels on canvas - actual artwork
-
-    // renderRectHandles(), renderEllipseHandles(), renderRotateHandle(), renderBounds(): these methods draw editor UI, not the actual shapes - editor UI overlay
 }
