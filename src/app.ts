@@ -52,6 +52,7 @@ import { evalCubicBezier } from "./engine/geometry/fitting/cubicBezier";
 import { chordLengthParameters } from "./engine/geometry/fitting/parameterize";
 import { calculateFittingError } from "./engine/geometry/fitting/fittingError";
 import { fitBezierSegments } from "./engine/geometry/fitting/fitPath";
+import { refineParameters } from "./engine/geometry/fitting/refineParameters";
 
 
 function buildDemoScene() {
@@ -361,6 +362,52 @@ function main(): void {
     const layers = layersList;
     const noFill = noFillInput;
     const noStroke = noStrokeInput;
+
+    const testCurve = {
+        p0: { x: 0, y: 0 },
+        p1: { x: 0, y: 100 },
+        p2: { x: 100, y: 100 },
+        p3: { x: 100, y: 0 },
+    };
+
+    const actualParameters = [0, 0.25, 0.5, 0.75, 1];
+
+    const samples = actualParameters.map(t => evalCubicBezier(testCurve, t));
+
+    // deliberately inaccurate estimates
+    let estimatedParams = [0, 0.35, 0.58, 0.82, 1];
+
+    const initialError = calculateFittingError(
+        samples,
+        estimatedParams,
+        testCurve
+    );
+
+    // perform five rounds of refinement
+    for (let i = 0; i < 5; i++) {
+        estimatedParams = refineParameters(
+            samples,
+            estimatedParams,
+            testCurve
+        );
+
+        console.log(`Refinement ${i + 1}:`, estimatedParams);
+
+    }
+
+    const finalError = calculateFittingError(
+        samples,
+        estimatedParams,
+        testCurve
+    );
+
+    console.log("Actual:", actualParameters);
+    console.log("Refined:", estimatedParams);
+
+    console.log("Initial squared error:", initialError.maxSquaredError);
+    console.log("Final squared error:", finalError.maxSquaredError);
+
+    console.assert(finalError.maxSquaredError < initialError.maxSquaredError, "expected refinement to reduce the error")
 
     function applyCurrentStyleToSelection(): void {
         const ids = editorState.selectedShapeIds.length > 0

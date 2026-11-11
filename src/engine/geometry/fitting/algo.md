@@ -687,7 +687,116 @@ The next step is to introduce a numerical technique called Newton-Raphson iterat
 
 - Refining the parameter values -
 
+Take the chordLengthParameters() function. It estimates the t value associated with each mouse sample using distances along the recorded points.
 
+For example:
+    
+    const parameters = [0, 0.28, 0.53, 0.76, 1];
+
+But those are estimates. The points might actually correspond to positions such as:
+
+    const actualParameters = [0, 0.25, 0.5, 0.75, 1];
+
+That difference matters because the least-squares solver uses these t values to determine where each sample should lie on the curve
+
+Newton-Raphson will help improve these estimates so a better fit can potentially be achieved with fewer Bezier segments.
+
+The next objective is to build and test the implementation of Newton-Raphson separately, just as we have done with the prev components. 
+
+-The math behind Newton-Raphson-
+
+Imagine there is a recorded mouse point: P, and a fitted Bezier curve. 
+The objective is to find a parameter: t, where the curve comes as close to possible to P.
+The goal is to minimize the distance between P and B(t). B = Bezier
+
+To minimize the squared distance, seek a value of t satisfying:
+
+    (B(t)-P)•B'(t)=0
+
+- B(t) is the position on the Bezier curve.
+- P is the recorded mouse point.
+- B'(t) is the first derivative, representing the curve's tangent.
+
+Newton-Raphson gives an updated formula:
+
+    t_new = t - (B(t)-P)•B'(t) ----over---- B'(t)•B'(t)+(B(t)-P)•B"(t)
+
+Taking note of the two derivatives: B'(t) and B"(t).
+These haven't been implemented yet, so it will be in order to do so.
+
+- Adding derivative functions to cubicBezier.ts -
+
+see formula at the bottom of cubicBezier file
+
+The first derivative describes the direction and rate of change of the curve as t increases.
+The second derivative describes how that first derivative changes.
+
+They allow Newton-Raphson to estimate how to adjust t to reduce the fitting error.
+
+-Safeguards built in refineParameters.ts-
+
+Why are the safeguards needed?
+
+Newton-Raphson is powerful, but it isn't guaranteed to find the correct solution from every starting estimate.
+
+For example, if a curve loops back on itself, one mouse point might be close to multiple locations on that curve. 
+
+The implementation therefore: 
+    - rejects unstable divisions
+    - keeps parameters between 0 and 1
+    - accepts only corrections that reduce squared distance
+    - preserves the order of points along the curve
+
+These checks make this a reasonable first refinement implementation.
+Later, introduction of additional strategies will be needed for difficult geometries.
+
+-Time to test the refinement-
+
+    const testCurve = {
+        p0: { x: 0, y: 0 },
+        p1: { x: 0, y: 100 },
+        p2: { x: 100, y: 100 },
+        p3: { x: 100, y: 0 },
+    };
+
+    const actualParameters = [0, 0.25, 0.5, 0.75, 1];
+
+    const samples = actualParameters.map(t => evalCubicBezier(testCurve, t));
+
+    // deliberately inaccurate estimates
+    let estimatedParams = [0, 0.35, 0.58, 0.82, 1];
+
+    const initialError = calculateFittingError(
+        samples,
+        estimatedParams,
+        testCurve
+    );
+
+    // perform five rounds of refinement
+    for (let i = 0; i < 5; i++) {
+        estimatedParams = refineParameters(
+            samples,
+            estimatedParams,
+            testCurve
+        );
+
+        console.log(`Refinement ${i + 1}:`, estimatedParams);
+
+    }
+
+    const finalError = calculateFittingError(
+        samples,
+        estimatedParams,
+        testCurve
+    );
+
+    console.log("Actual:", actualParameters);
+    console.log("Refined:", estimatedParams);
+
+    console.log("Initial squared error:", initialError.maxSquaredError);
+    console.log("Final squared error:", finalError.maxSquaredError);
+
+    console.assert(finalError.maxSquaredError < initialError.maxSquaredError, "expected refinement to reduce the error")
 
 
 
