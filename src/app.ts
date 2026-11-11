@@ -47,8 +47,11 @@ import {
     makeSmoothBezierPath,
 } from "./engine";
 
+import { fitCubicLeastSquares } from "./engine/geometry/fitting/fitCubic";
 import { evalCubicBezier } from "./engine/geometry/fitting/cubicBezier";
 import { chordLengthParameters } from "./engine/geometry/fitting/parameterize";
+import { calculateFittingError } from "./engine/geometry/fitting/fittingError";
+import { fitBezierSegments } from "./engine/geometry/fitting/fitPath";
 
 
 function buildDemoScene() {
@@ -358,27 +361,6 @@ function main(): void {
     const layers = layersList;
     const noFill = noFillInput;
     const noStroke = noStrokeInput;
-
-        // temporary:
-    const testCurve = {
-        p0: { x: 0, y: 0 },
-        p1: { x: 0, y: 100 },
-        p2: { x: 100, y: 100 },
-        p3: { x: 100, y: 0 },
-    };
-
-    console.log("Start:", evalCubicBezier(testCurve, 0));
-
-    console.log("Middle:", evalCubicBezier(testCurve, 0.5));
-
-    console.log("End:", evalCubicBezier(testCurve, 1));
-
-    console.log("Parameters:", chordLengthParameters([
-        { x: 0, y: 0 },
-        { x: 3, y: 4 },
-        { x: 6, y: 8 },
-    ])
-    );
 
     function applyCurrentStyleToSelection(): void {
         const ids = editorState.selectedShapeIds.length > 0
@@ -1148,7 +1130,7 @@ function main(): void {
         if (activeTool === "mask-trace") {
             if (!editorState.selectedShapeId) {
                 console.warn("select an image before tracing a mask");
-                
+
                 return;
             }
 
@@ -1157,8 +1139,8 @@ function main(): void {
                 editorState.selectedShapeId
             );
 
-            if (!image || image.type !== "image") { 
-                
+            if (!image || image.type !== "image") {
+
                 console.warn("Trace mask requires a selected image.");
                 return;
             }
@@ -1503,7 +1485,7 @@ function main(): void {
             }
 
             const localPoint = applyInverseTransform(
-                point, 
+                point,
                 image.transform
             );
 
